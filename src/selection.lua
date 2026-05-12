@@ -24,7 +24,7 @@ function Selection.set(mask)
 		mask = newmask
 	end
 
-	if modifierKeys.ctrl then
+	if modifierKeys.ctrl or modifierKeys.cmd then
 		for k in pairs(mask) do
 			Selection.mask[k] = nil
 		end

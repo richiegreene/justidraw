@@ -64,6 +64,7 @@ modifierKeys = {}
 modifierKeys.ctrl = false
 modifierKeys.shift = false
 modifierKeys.alt = false
+modifierKeys.cmd = false
 
 -- local mainFont = love.graphics.newFont(22)
 local smallFont = love.graphics.newFont(16)
@@ -111,7 +112,7 @@ end
 
 function setTool()
 	if not (mouseDown[1] or mouseDown[3]) then
-		if modifierKeys.ctrl then
+		if modifierKeys.ctrl or modifierKeys.cmd then
 			if selectedTool.drawTool then
 				currentTool = Erase
 			elseif selectedTool == Pan then
@@ -162,7 +163,7 @@ function mousepressed(button)
 		setTool()
 
 		if button == 3 then
-			if modifierKeys.ctrl then
+			if modifierKeys.ctrl or modifierKeys.cmd then
 				currentTool = Zoom
 			else
 				currentTool = Pan
@@ -335,6 +336,8 @@ function love.keypressed(key)
 		modifierKeys.ctrl = true
 	elseif key == "lalt" or key == "ralt" then
 		modifierKeys.alt = true
+	elseif key == "lgui" or key == "rgui" then
+		modifierKeys.cmd = true
 	end
 
 	if textInput then
@@ -365,19 +368,19 @@ function love.keypressed(key)
 				Audio.seek(View.invTransform(0, 0))
 				Audio.play()
 			end
-		elseif key == "o" and modifierKeys.ctrl then
+		elseif key == "o" and (modifierKeys.ctrl or modifierKeys.cmd) then
 			love.system.openURL("file://" .. love.filesystem.getSaveDirectory())
-		elseif key == "r" and modifierKeys.ctrl then
+		elseif key == "r" and (modifierKeys.ctrl or modifierKeys.cmd) then
 			Audio.render()
-		elseif key == "t" and modifierKeys.ctrl then
+		elseif key == "t" and (modifierKeys.ctrl or modifierKeys.cmd) then
 			Theme.next()
-		elseif key == "b" and modifierKeys.ctrl then
+		elseif key == "b" and (modifierKeys.ctrl or modifierKeys.cmd) then
 			Audio.nextSynth()
-		elseif key == "n" and modifierKeys.ctrl then
+		elseif key == "n" and (modifierKeys.ctrl or modifierKeys.cmd) then
 			print(song.name)
 			textEntered = song.name
 			textInput = true
-		elseif key == "f" and modifierKeys.ctrl then
+		elseif key == "f" and (modifierKeys.ctrl or modifierKeys.cmd) then
 			if followPlay then
 				followPlay = false
 				setMessage("follow off")
@@ -437,7 +440,7 @@ function love.keypressed(key)
 			selectTool(Move)
 		elseif key == "e" then
 			selectTool(Erase)
-		elseif key == "s" and not modifierKeys.ctrl then
+		elseif key == "s" and not (modifierKeys.ctrl or modifierKeys.cmd) then
 			selectTool(Smooth)
 		elseif key == "f" then
 			selectTool(Flatten)
@@ -520,11 +523,11 @@ function love.keypressed(key)
 		elseif key == "down" then
 			song.gain = song.gain / 1.41421
 			setMessage("volume: " .. math.floor(0.5 + 20 * math.log(song.gain) / math.log(10)) .. "dB")
-		elseif key == "z" and modifierKeys.ctrl and not modifierKeys.shift then
+		elseif key == "z" and (modifierKeys.ctrl or modifierKeys.cmd) and not modifierKeys.shift then
 			Undo.undo()
-		elseif (key == "y" and modifierKeys.ctrl) or (key == "z" and modifierKeys.ctrl and modifierKeys.shift) then
+		elseif (key == "y" and (modifierKeys.ctrl or modifierKeys.cmd)) or (key == "z" and (modifierKeys.ctrl or modifierKeys.cmd) and modifierKeys.shift) then
 			Undo.redo()
-		elseif key == "s" and modifierKeys.ctrl then
+		elseif key == "s" and (modifierKeys.ctrl or modifierKeys.cmd) then
 			File.save()
 		elseif key == "escape" then
 			love.event.quit()
@@ -545,6 +548,8 @@ function love.keyreleased(key)
 		modifierKeys.ctrl = false
 	elseif key == "lalt" or key == "ralt" then
 		modifierKeys.alt = false
+	elseif key == "lgui" or key == "rgui" then
+		modifierKeys.cmd = false
 	end
 
 	if not textInput then

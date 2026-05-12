@@ -50,7 +50,7 @@ function Stretch.mousedown()
 		if modifierKeys.shift then
 			stretchy = 0
 		end
-		if modifierKeys.ctrl then
+		if modifierKeys.ctrl or modifierKeys.cmd then
 			stretchx = 0
 		end
 

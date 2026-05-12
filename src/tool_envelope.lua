@@ -31,7 +31,7 @@ function Envelope.mousedown()
 			local wt = math.min(math.max(v.w, 0.01), 0.99)
 			wt = math.log(wt / (1 - wt))
 
-			if modifierKeys.ctrl then
+			if modifierKeys.ctrl or modifierKeys.cmd then
 				wt = wt - weight
 			else
 				wt = wt + weight

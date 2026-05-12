@@ -29,7 +29,7 @@ function Smudge.mousedown()
 		local weight = math.exp(-(dist / radius) ^ 2) * pres
 
 		if weight > 0.01 then
-			if modifierKeys.ctrl then
+			if modifierKeys.ctrl or modifierKeys.cmd then
 				v.y = v.y + math.sin(v.x / 35) * weight * 3
 			else
 				v.x = v.x + dx * weight * 2
