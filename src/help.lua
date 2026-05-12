@@ -6,6 +6,7 @@ shortcuts
  O: pan/zoom
  G: grab
  M: move
+ C: comment
  S: smooth
  F: flatten
  H: dodge/burn envelope

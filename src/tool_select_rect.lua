@@ -1,3 +1,4 @@
+local Comment = require("tool_comment")
 local SelectRect = {}
 
 SelectRect.name = [[
@@ -33,11 +34,33 @@ function SelectRect.mousereleased()
 		end
 	end
 
+	local selectedComment = nil
+	for _, comment in ipairs(song.comments or {}) do
+		local w = comment.w or Comment.width
+		local h = comment.h or Comment.height
+		if x2 > comment.x and x1 < comment.x + w and y2 > comment.y and y1 < comment.y + h then
+			selectedComment = comment
+			break
+		end
+	end
+
+	if modifierKeys.ctrl or modifierKeys.cmd then
+		if selectedComment and Comment.selected == selectedComment then
+			Comment.selected = nil
+		end
+	elseif modifierKeys.shift then
+		if selectedComment then
+			Comment.selected = selectedComment
+		end
+	else
+		Comment.selected = selectedComment
+	end
+
 	Selection.set(mask)
 end
 
 function SelectRect.draw()
-	if mouseDown[1] then
+	if mouseDown[1] and SelectRect.ix and SelectRect.iy then
 		love.graphics.setColor(Theme.current.cursor)
 		love.graphics.rectangle("line", SelectRect.ix, SelectRect.iy, mouseX - SelectRect.ix, mouseY - SelectRect.iy)
 	end

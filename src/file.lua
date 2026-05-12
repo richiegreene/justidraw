@@ -42,6 +42,7 @@ function File.newSong()
 	new.track = {}
 	new.track[1] = {}
 	new.gain = 0.125
+	new.comments = {}
 	new.name = File.randomName()
 	new.synth = 1
 	return new
@@ -102,6 +103,10 @@ function File.read(f)
 
 	if not song.synth then
 		song.synth = 1
+	end
+
+	if not song.comments then
+		song.comments = {}
 	end
 
 	-- remove any NaNs

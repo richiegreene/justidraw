@@ -25,6 +25,7 @@ local Envelope = require("tool_envelope")
 local EnvelopeAlt = require("tool_envelopealt")
 local Stretch = require("tool_stretch")
 local Smudge = require("tool_smudge")
+local Comment = require("tool_comment")
 
 --print console directly
 io.stdout:setvbuf("no")
@@ -95,12 +96,12 @@ function love.load()
 
 	love.keyboard.setKeyRepeat(true)
 
+	File.new()
 	Selection.init()
-
+    Comment.init()
 	selectTool(Draw)
 	Audio.load()
 
-	File.new()
 	Undo.load()
 	File.loadLast()
 end
@@ -251,6 +252,7 @@ end
 function love.draw()
 	love.graphics.setBackgroundColor(Theme.current.background)
 	View.draw()
+	Comment.draw()
 	if currentTool.draw then
 		currentTool.draw()
 	end
@@ -319,12 +321,13 @@ function love.draw()
 
 		local f = love.graphics.getFont()
 		local w = f:getWidth(textEntered)
-		local w2 = f:getWidth("project name:")
+		local label = textInputLabel or "project name:"
+		local w2 = f:getWidth(label)
 		local h = f:getHeight(textEntered)
 
 		love.graphics.setColor(Theme.current.text)
 
-		love.graphics.print("project name:", math.floor((width - w2) * 0.5), math.floor((height - h) * 0.5 - h))
+		love.graphics.print(label, math.floor((width - w2) * 0.5), math.floor((height - h) * 0.5 - h))
 		love.graphics.print(textEntered, math.floor((width - w) * 0.5), math.floor((height - h) * 0.5))
 	end
 end
@@ -347,16 +350,24 @@ function love.keypressed(key)
 				textEntered = string.sub(textEntered, 1, byteoffset - 1)
 			end
 		elseif key == "return" then
-			local name = textEntered
-			-- trim spaces
-			name = string.gsub(name, "^%s*(.-)%s*$", "%1")
-			if name == "" then
-				name = File.randomName()
+			if textEditTarget then
+				textEditTarget.text = textEntered
+			else
+				local name = textEntered
+				-- trim spaces
+				name = string.gsub(name, "^%s*(.-)%s*$", "%1")
+				if name == "" then
+					name = File.randomName()
+				end
+				File.setName(name)
 			end
-			File.setName(name)
 			textInput = false
+			textEditTarget = nil
+			textInputLabel = nil
 		elseif key == "escape" then
 			textInput = false
+			textEditTarget = nil
+			textInputLabel = nil
 		end
 	else
 		setTool()
@@ -421,8 +432,12 @@ function love.keypressed(key)
 				selectNotes = true
 				setMessage("select notes")
 			end
+		elseif key == "return" and Comment.selected then
+			Comment.startEditing(Comment.selected)
 		elseif key == "delete" or key == "backspace" then
-			if Selection.isEmpty() then
+			if Comment.selected then
+				Comment.removeSelected()
+			elseif Selection.isEmpty() then
 				File.new()
 			else
 				Edit.remove(Selection.mask)
@@ -440,6 +455,8 @@ function love.keypressed(key)
 			selectTool(Move)
 		elseif key == "e" then
 			selectTool(Erase)
+		elseif key == "c" then
+			selectTool(Comment)
 		elseif key == "s" and not (modifierKeys.ctrl or modifierKeys.cmd) then
 			selectTool(Smooth)
 		elseif key == "f" then
