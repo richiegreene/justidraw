@@ -2,12 +2,12 @@ return [[
 shortcuts
  B: freehand draw (Brush)
  P: line tool (Pen)
- E: Eraser
- O: Pan/zoom
- G: Grab
- M: Move
- S: Smooth
- F: Flatten
+ E: eraser
+ O: pan/zoom
+ G: grab
+ M: move
+ S: smooth
+ F: flatten
  H: dodge/burn envelope
  < and >: selected envelope
  ?: normalize envelope
