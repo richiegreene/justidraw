@@ -516,6 +516,22 @@ function love.keypressed(key)
 			song.bpmOffset = song.bpmOffset - 1
 		elseif key == "right" then
 			song.bpmOffset = song.bpmOffset + 1
+		elseif key == "up" and modifierKeys.shift then
+			if not Selection.isEmpty() then
+				for _, v in ipairs(Selection.list) do
+					v.y = v.y - 1200
+				end
+				Undo.register()
+				setMessage("8va")
+			end
+		elseif key == "down" and modifierKeys.shift then
+			if not Selection.isEmpty() then
+				for _, v in ipairs(Selection.list) do
+					v.y = v.y + 1200
+				end
+				Undo.register()
+				setMessage("8vb")
+			end
 		elseif key == "up" then
 			song.gain = song.gain * 1.41421
 			song.gain = math.min(song.gain, 0.5)
