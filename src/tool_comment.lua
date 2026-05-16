@@ -19,30 +19,29 @@ function Comment.init()
     end
 end
 
-local function computeTextHeight(text, width)
+local function computeDimensions(text)
     local font = Comment.font or love.graphics.getFont()
     local maxLineWidth = 0
     local lineCount = 0
+
+    if not text or text == "" then
+        -- Provide minimal dimensions for an empty comment, e.g., for padding
+        return 32, font:getHeight() + 32
+    end
 
     for line in text:gmatch("[^\n]+") do
         lineCount = lineCount + 1
         maxLineWidth = math.max(maxLineWidth, font:getWidth(line))
     end
 
-    if lineCount == 0 then
-        lineCount = 1
-    end
-
-    local wrapLines = math.max(1, math.ceil(maxLineWidth / math.max(1, width - 16)))
-    return 16 + lineCount * wrapLines * font:getHeight()
+    -- Add padding to width and height
+    return maxLineWidth + 32, lineCount * font:getHeight() + 32
 end
 
 function Comment.reflow(comment)
-    comment.w = comment.w or Comment.width
-    comment.h = computeTextHeight(comment.text or "", comment.w)
-    if comment.h < Comment.height then
-        comment.h = Comment.height
-    end
+    local calculatedWidth, calculatedHeight = computeDimensions(comment.text)
+    comment.w = calculatedWidth
+    comment.h = calculatedHeight
 end
 
 function Comment.find(x, y)
@@ -62,14 +61,15 @@ function Comment.select(comment)
 end
 
 function Comment.add(x, y, text)
-    text = text or "new note"
+    text = text or ""
+    local calculatedWidth, calculatedHeight = computeDimensions(text)
     local comment = {
         x = x,
         y = y,
-        w = Comment.width,
+        w = calculatedWidth,
+        h = calculatedHeight,
         text = text,
     }
-    Comment.reflow(comment)
     table.insert(song.comments, comment)
     Comment.selected = comment
     return comment
@@ -117,9 +117,7 @@ function Comment.draw()
         local w = comment.w
         local h = comment.h
 
-        local bg = Theme.current.background
-        love.graphics.setColor(bg[1], bg[2], bg[3], 0.92)
-        love.graphics.rectangle("fill", x, y, w, h, 8)
+
 
         if comment == Comment.selected then
             love.graphics.setColor(Theme.current.highlight)
