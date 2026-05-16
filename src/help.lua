@@ -26,7 +26,7 @@ shortcuts
  [ and ]: change brush radius
  + and -: change tempo
  Space: play/pause
- ctrl+Z: undo
+ ctrl+P: snap to (*:octave repeating on/off)
  ctrl+Y / ctrl+shift+Z: redo
  ctrl+S: save
  ctrl+O: open save folder

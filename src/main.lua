@@ -26,6 +26,7 @@ local EnvelopeAlt = require("tool_envelopealt")
 local Stretch = require("tool_stretch")
 local Smudge = require("tool_smudge")
 local Comment = require("tool_comment")
+local Snap = require("tool_snap")
 
 --print console directly
 io.stdout:setvbuf("no")
@@ -101,6 +102,7 @@ function love.load()
 	File.new()
 	Selection.init()
     Comment.init()
+	Snap.init()
 	selectTool(Draw)
 	Audio.load()
 
@@ -354,6 +356,9 @@ function love.keypressed(key)
 		elseif key == "return" then
 			if textEditTarget then
 				textEditTarget.text = textEntered
+				if textEditTarget == Snap then
+					Snap.snappingLogic()
+				end
 			else
 				local name = textEntered
 				-- trim spaces
@@ -370,7 +375,9 @@ function love.keypressed(key)
 			textInput = false
 			textEditTarget = nil
 			textInputLabel = nil
-		end
+		elseif key == "8" and modifierKeys.shift and textEditTarget == Snap then -- Toggle octave repeating for Snap tool using '*' (shift+8)
+            Snap.toggleOctaveRepeating()
+        end
 	else
 		setTool()
 
@@ -393,6 +400,9 @@ function love.keypressed(key)
 			print(song.name)
 			textEntered = song.name
 			textInput = true
+		elseif key == "p" and (modifierKeys.ctrl or modifierKeys.cmd) then
+			selectTool(Snap)
+			Snap.startEditing()
 		elseif key == "f" and (modifierKeys.ctrl or modifierKeys.cmd) then
 			if followPlay then
 				followPlay = false
