@@ -14,7 +14,7 @@ shortcuts
  ?: normalize envelope
  N: envelope tool
  T: transpose/stretch
- shift+up/down: transpose up/down octave
+ 1-4+up/down: cent-octave shift
  U: smudge / vibrato
  R: Rectangular selection
  L: Lasso selection

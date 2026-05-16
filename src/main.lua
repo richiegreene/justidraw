@@ -533,21 +533,69 @@ function love.keypressed(key)
 			song.bpmOffset = song.bpmOffset - 1
 		elseif key == "right" then
 			song.bpmOffset = song.bpmOffset + 1
-		elseif key == "up" and modifierKeys.shift then
+		elseif key == "up" and love.keyboard.isDown("1") then
+			if not Selection.isEmpty() then
+				for _, v in ipairs(Selection.list) do
+					v.y = v.y - 1
+				end
+				Undo.register()
+				setMessage("+1c")
+			end
+		elseif key == "down" and love.keyboard.isDown("1") then
+			if not Selection.isEmpty() then
+				for _, v in ipairs(Selection.list) do
+					v.y = v.y + 1
+				end
+				Undo.register()
+				setMessage("-1c")
+			end
+		elseif key == "up" and love.keyboard.isDown("2") then
+			if not Selection.isEmpty() then
+				for _, v in ipairs(Selection.list) do
+					v.y = v.y - 10
+				end
+				Undo.register()
+				setMessage("+10c")
+			end
+		elseif key == "down" and love.keyboard.isDown("2") then
+			if not Selection.isEmpty() then
+				for _, v in ipairs(Selection.list) do
+					v.y = v.y + 10
+				end
+				Undo.register()
+				setMessage("-10c")
+			end
+		elseif key == "up" and love.keyboard.isDown("3") then
+			if not Selection.isEmpty() then
+				for _, v in ipairs(Selection.list) do
+					v.y = v.y - 100
+				end
+				Undo.register()
+				setMessage("+100c")
+			end
+		elseif key == "down" and love.keyboard.isDown("3") then
+			if not Selection.isEmpty() then
+				for _, v in ipairs(Selection.list) do
+					v.y = v.y + 100
+				end
+				Undo.register()
+				setMessage("-100c")
+			end
+		elseif key == "up" and love.keyboard.isDown("4") then
 			if not Selection.isEmpty() then
 				for _, v in ipairs(Selection.list) do
 					v.y = v.y - 1200
 				end
 				Undo.register()
-				setMessage("8va")
+				setMessage("+1200c")
 			end
-		elseif key == "down" and modifierKeys.shift then
+		elseif key == "down" and love.keyboard.isDown("4") then
 			if not Selection.isEmpty() then
 				for _, v in ipairs(Selection.list) do
 					v.y = v.y + 1200
 				end
 				Undo.register()
-				setMessage("8vb")
+				setMessage("-1200c")
 			end
 		elseif key == "up" then
 			song.gain = song.gain * 1.41421
