@@ -54,8 +54,10 @@ pres = 0
 
 preview = true
 textInput = false
+textEditTarget = nil
+textInputLabel = nil
 
-local textEntered = "song title"
+textEntered = "song title"
 
 mouseX, mouseY = 0, 0
 mousePX, mousePY = 0, 0
