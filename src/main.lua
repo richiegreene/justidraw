@@ -371,6 +371,8 @@ function love.keypressed(key)
 			textInput = false
 			textEditTarget = nil
 			textInputLabel = nil
+            selectTool(Draw) -- Revert to default drawing tool
+
 		elseif key == "escape" then
 			textInput = false
 			textEditTarget = nil

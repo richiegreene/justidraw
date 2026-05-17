@@ -90,37 +90,58 @@ function Snap.snappingLogic()
         -- 2. Perform snapping for each selected item
         for _, v in ipairs(Selection.list) do
             local current_vy = v.y
+                local snapped_vy = current_vy -- Default to current_vy if no suitable snap is found
 
-            local candidate_target_vys = {}
+                local effective_target_vys = {}
 
-            -- Determine the current octave block for the selected v.y
-            local current_octave_base_vy_for_c = math.floor(current_vy / CENTS_PER_OCTAVE) * CENTS_PER_OCTAVE
+                if Snap.octaveRepeating then
+                    -- Original logic: generate candidates across octaves based on the current_vy's octave
+                    local current_octave_base_vy_for_c = math.floor(current_vy / CENTS_PER_OCTAVE) * CENTS_PER_OCTAVE
+                    local oct_offsets_to_check = {0, -CENTS_PER_OCTAVE, CENTS_PER_OCTAVE}
 
-            -- Generate target v.y values in the vicinity of the current v.y
-            local oct_offsets_to_check = {0}
-            if Snap.octaveRepeating then
-                table.insert(oct_offsets_to_check, -CENTS_PER_OCTAVE)
-                table.insert(oct_offsets_to_check, CENTS_PER_OCTAVE)
-            end
+                    for _, oct_offset in ipairs(oct_offsets_to_check) do
+                        for _, interval_cents in ipairs(Snap.targetCentIntervals) do
+                            table.insert(effective_target_vys, current_octave_base_vy_for_c - interval_cents + oct_offset)
+                        end
+                    end
 
-            for _, oct_offset in ipairs(oct_offsets_to_check) do
-                for _, interval_cents in ipairs(Snap.targetCentIntervals) do
-                    table.insert(candidate_target_vys, current_octave_base_vy_for_c - interval_cents + oct_offset)
-                end
-            end
+                    -- Find the nearest candidate target v.y from all generated candidates
+                    local min_diff = math.huge
+                    for _, target_vy in ipairs(effective_target_vys) do
+                        local diff = math.abs(current_vy - target_vy)
+                        if diff < min_diff then
+                            min_diff = diff
+                            snapped_vy = target_vy
+                        end
+                    end
+                else
+                    -- NEW LOGIC: Snapping only to the C4-C5 octave (v.y from 0 to -1200, where 0 is C4)
+                    -- First, calculate the equivalent v.y in the reference octave (0 to -1200)
+                    local vy_in_ref_octave_equivalent = current_vy % CENTS_PER_OCTAVE
+                    if vy_in_ref_octave_equivalent > 0 then
+                        vy_in_ref_octave_equivalent = vy_in_ref_octave_equivalent - CENTS_PER_OCTAVE
+                    end
+                    -- Now vy_in_ref_octave_equivalent is in the range (-CENTS_PER_OCTAVE, 0]
 
-            -- Find the nearest candidate target v.y
-            local min_diff = math.huge
-            local snapped_vy = current_vy
+                    -- Generate candidate target v.y's directly within the C4-C5 reference (0 to -1200)
+                    local reference_octave_candidates = {}
+                    for _, interval_cents in ipairs(Snap.targetCentIntervals) do
+                        table.insert(reference_octave_candidates, -interval_cents) -- C4 reference is 0
+                    end
 
-            for _, target_vy in ipairs(candidate_target_vys) do
-                local diff = math.abs(current_vy - target_vy)
-                if diff < min_diff then
-                    min_diff = diff
-                    snapped_vy = target_vy
-                end
-            end
-            v.y = snapped_vy
+                    -- Find the nearest candidate to vy_in_ref_octave_equivalent
+                    local min_diff_ref = math.huge
+                    local snapped_vy_within_ref_octave = vy_in_ref_octave_equivalent -- Default if no snap
+
+                    for _, target_vy_ref in ipairs(reference_octave_candidates) do
+                        local diff = math.abs(vy_in_ref_octave_equivalent - target_vy_ref)
+                        if diff < min_diff_ref then
+                            min_diff_ref = diff
+                            snapped_vy_within_ref_octave = target_vy_ref
+                        end
+                    end
+                    snapped_vy = snapped_vy_within_ref_octave
+                end            v.y = snapped_vy
         end
         Undo.register()
         setMessage("Snapping complete. Ratios: " .. Snap.text .. ", Octave repeating: " .. (Snap.octaveRepeating and "on" or "off"))
