@@ -19,15 +19,28 @@ local function trim(s)
     return s:match("^%s*(.-)%s*$") or ""
 end
 
--- Helper to parse N/M ratio string into cent value
-local function parse_ratio_to_cents(ratio_string)
+-- Helper to parse N/M ratio string into its numerator and denominator
+local function parse_single_ratio_as_num_den(ratio_string)
     local num_str, den_str = ratio_string:match("^(%d+)/(%d+)$")
+    if not den_str then -- Check if it's an integer like "2"
+        num_str = ratio_string:match("^(%d+)$")
+        if num_str then den_str = "1" end
+    end
     if num_str and den_str then
         local num = tonumber(num_str)
         local den = tonumber(den_str)
         if num and den and den ~= 0 then
-            return CENTS_PER_OCTAVE * math.log(num / den) / math_log2
+            return num, den
         end
+    end
+    return nil, nil
+end
+
+-- Helper to parse N/M ratio string into cent value
+local function parse_ratio_to_cents(ratio_string)
+    local num, den = parse_single_ratio_as_num_den(ratio_string)
+    if num and den then
+        return CENTS_PER_OCTAVE * math.log(num / den) / math_log2
     end
     return nil -- Invalid ratio format or division by zero
 end
@@ -90,7 +103,7 @@ end
 
 -- Helper to parse "n\EDO#" format into a single cent step
 local function parse_edo_step(step_string)
-    local s_str, e_str = step_string:match("^(%d+)\\(%d+)$")
+    local s_str, e_str = step_string:match([[^(%d+)\\(%d+)$]])
     if s_str and e_str then
         local s = tonumber(s_str)
         local e = tonumber(e_str)
@@ -101,12 +114,52 @@ local function parse_edo_step(step_string)
     return nil -- Invalid EDO step format
 end
 
+-- Forward declarations for mutually recursive local functions
+local parse_pitch_spec
+local parse_multiplied_expression
+
+-- Helper to parse multiplied expressions like "A(B)"
+parse_multiplied_expression = function(expr_string)
+    -- Pattern: Multiplier(Multiplicand). Multiplier can be N/D or N. Multiplicand can be anything.
+    local multiplier_part, multiplicand_part = expr_string:match("^(%S+)%((.*)%)$") -- %S+ matches non-whitespace characters for multiplier
+                                                                                 -- (.*) captures everything inside parentheses
+
+    if multiplier_part and multiplicand_part then
+        local multiplier_cents_offset = parse_ratio_to_cents(multiplier_part)
+        if not multiplier_cents_offset then return nil end -- Invalid multiplier format
+
+        local combined_cents_list = {}
+        -- Multiplicand part can be a comma-separated list of pitch specifications
+        local multiplicand_specs = {}
+        local cleaned_multiplicand = multiplicand_part:gsub("%s*,%s*", ",")
+        for spec_item in cleaned_multiplicand:gmatch("[^,]+") do
+            table.insert(multiplicand_specs, spec_item)
+        end
+
+        for _, spec in ipairs(multiplicand_specs) do
+            -- Recursively parse each part of the multiplicand
+            local parsed_multiplicand_cents = parse_pitch_spec(spec)
+            if parsed_multiplicand_cents then
+                for _, cents_val in ipairs(parsed_multiplicand_cents) do
+                    table.insert(combined_cents_list, cents_val + multiplier_cents_offset)
+                end
+            end
+        end
+        return combined_cents_list
+    end
+    return nil
+end
+
 -- Main dispatcher to parse any pitch specification string
-local function parse_pitch_spec(spec_string)
+parse_pitch_spec = function(spec_string)
     spec_string = trim(spec_string) -- Remove whitespace
 
-    -- Try EDO step first (most specific regex with '')
-    local result = parse_edo_step(spec_string)
+    -- Try Multiplied Expression first
+    local result = parse_multiplied_expression(spec_string)
+    if result then return result end
+
+    -- Try EDO step next (most specific regex with '')
+    result = parse_edo_step(spec_string)
     if result then return result end
 
     -- Try Full EDO
@@ -120,8 +173,8 @@ local function parse_pitch_spec(spec_string)
     end
     
     -- Try standard Ratio (N/M) last
-    result = parse_ratio_to_cents(spec_string)
-    if result then return result end
+    local single_cent_result = parse_ratio_to_cents(spec_string) -- Pass string directly
+    if single_cent_result ~= nil then return {single_cent_result} end -- Wrap single result in a list
 
     return nil -- No matching format
 end
@@ -235,7 +288,8 @@ function Snap.snappingLogic()
                         snapped_vy = target_vy
                     end
                 end
-            end            v.y = snapped_vy
+            end
+            v.y = snapped_vy
         end
         Undo.register()
         setMessage("Snapping complete. Ratios: " .. Snap.text .. ", Octave repeating: " .. (Snap.octaveRepeating and "on" or "off"))
