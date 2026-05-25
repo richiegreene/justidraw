@@ -2,7 +2,7 @@ local Envelope = {}
 
 Envelope.radius = 30
 Envelope.mode = 0 -- 0 for default, 1 for textured
-Envelope.modeName = {"default", "airbrush", "marker"}
+Envelope.modeName = {"default", "airbrush"}
 Envelope.name = [[
 increase envelope
 ctrl: decrease
@@ -28,16 +28,13 @@ end
 
 function Envelope.mousedown()
 	local radius = Envelope.radius
-	local splatterRadiusFactor = 0.5 -- Make splatter effect more localized
 
 	for i, v in ipairs(Envelope.table) do
 		local x, y = View.transform(v.x, v.y)
 		local dist = math.sqrt(0.7 * (x - mouseX) ^ 2 + (y - mouseY) ^ 2)
 
 		local currentWeightRadius = radius
-		if Envelope.mode == 2 then -- Use a smaller effective radius for splatter mode
-			currentWeightRadius = radius * splatterRadiusFactor
-		end
+
 
 		local weight = math.exp(-(dist / currentWeightRadius) ^ 2) * pres * 0.2
 
@@ -47,17 +44,8 @@ function Envelope.mousedown()
 
 			if Envelope.mode == 1 then -- Airbrush mode
 				processedWeight = processedWeight * 1.2 * (math.random(0, 100) / 100) -- Slightly increased pressure
-				if math.random() > 0.95 then -- More sparse texture
+				if math.random() > 0.85 then -- More sparse texture
 					processedWeight = 0
-				end
-			elseif Envelope.mode == 2 then -- Marker mode
-				local dotStrength = 1.5 -- Controls how "exaggerated" a dot is
-
-				if math.random() > 0.995 then -- Even higher sparsity (0.5% chance of effect)
-					processedWeight = 0
-				else
-					-- Apply a stronger, fixed dot strength, modulated by pressure
-					processedWeight = dotStrength * pres * 0.2 * (math.random(70, 100) / 100) -- Small random variation
 				end
 			end
 
