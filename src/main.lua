@@ -148,7 +148,13 @@ function setTool()
 end
 
 function love.mousepressed(x, y, button)
-	if not tabletInput then
+	if textInput then
+		-- If text input is active, a click outside the text box cancels it.
+		textInput = false
+		textEditTarget = nil
+		textInputLabel = nil
+		selectTool(Pan) -- Return to Pan tool
+	elseif not tabletInput then
 		pres = 0.5
 		mousepressed(button)
 	end
@@ -371,12 +377,13 @@ function love.keypressed(key)
 			textInput = false
 			textEditTarget = nil
 			textInputLabel = nil
-            selectTool(Draw) -- Revert to default drawing tool
+            selectTool(Pan) -- Revert to default panning tool
 
 		elseif key == "escape" then
 			textInput = false
 			textEditTarget = nil
 			textInputLabel = nil
+            selectTool(Pan)
 		elseif key == "8" and modifierKeys.shift and textEditTarget == Snap then -- Toggle octave repeating for Snap tool using '*' (shift+8)
             Snap.toggleOctaveRepeating()
         end
