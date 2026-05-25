@@ -94,27 +94,34 @@ function Edit.join()
 		end
 	end
 
-	if #vlist == 1 then
-		setMessage("only one note selected")
+	if #vlist <= 1 then
+		setMessage("select at least two notes to join")
 		return
 	end
 
-	table.sort(vlist, function(a, b)
-		return a.x < b.x
-	end)
-
-	for i = 1, #vlist - 1 do
-		local v1 = vlist[i]
-		local v2 = vlist[i + 1]
+	if #vlist == 2 then
+		local v1 = vlist[1]
+		local v2 = vlist[2]
 
 		while v1.r do
 			v1 = v1.r
 		end
-
 		Edit.merge(v1, v2)
+	else -- More than two notes selected, use intelligent pairing
+		local acceptedJoins = Edit.findIntelligentPairs(vlist)
+
+		if #acceptedJoins == 0 then
+			setMessage("No suitable pairs found for intelligent join.")
+			return
+		end
+
+		for _, join_pair in ipairs(acceptedJoins) do
+			Edit.merge(join_pair.v_last_A, join_pair.v_first_B)
+		end
 	end
 
 	Selection.deselect()
+	Edit.resampleAll() -- Resample after all intelligent merges
 end
 
 function Edit.merge(v1, v2)
@@ -242,4 +249,63 @@ function Edit.resampleAll()
 	Edit.removeSingles()
 
 	Selection.refresh()
+end
+
+local PITCH_WEIGHT = 10 -- Higher weight for pitch difference
+local TIME_WEIGHT = 1   -- Lower weight for time difference
+
+function Edit.findIntelligentPairs(vlist)
+    local joinCandidates = {} -- Stores {v_last_A, v_first_B, cost, note_A_id, note_B_id}
+
+    -- Get unique note IDs for tracking
+    local noteIds = {}
+    for i, v_first in ipairs(vlist) do
+        noteIds[v_first] = i -- Map first vertex to a unique ID for the note
+    end
+
+    -- Generate all potential join candidates
+    for i, v_first_A in ipairs(vlist) do
+        local v_last_A = v_first_A
+        while v_last_A.r do v_last_A = v_last_A.r end -- Find last vertex of note A
+
+        for j, v_first_B in ipairs(vlist) do
+            if i ~= j then -- Don't join a note to itself
+                if v_last_A.x < v_first_B.x then -- Note A must end before Note B starts
+                    local pitchDiff = math.abs(v_last_A.y - v_first_B.y)
+                    local timeDiff = v_first_B.x - v_last_A.x -- Always positive due to previous check
+
+                    local cost = (pitchDiff * PITCH_WEIGHT) + (timeDiff * TIME_WEIGHT)
+
+                    table.insert(joinCandidates, {
+                        v_last_A = v_last_A,
+                        v_first_B = v_first_B,
+                        cost = cost,
+                        note_A_id = i,
+                        note_B_id = j
+                    })
+                end
+            end
+        end
+    end
+
+    -- Sort candidates by cost (ascending)
+    table.sort(joinCandidates, function(a, b)
+        return a.cost < b.cost
+    end)
+
+    local acceptedJoins = {}
+    local notesInvolved = {} -- Track notes that are already part of an accepted join
+
+    for _, candidate in ipairs(joinCandidates) do
+        if not notesInvolved[candidate.note_A_id] and not notesInvolved[candidate.note_B_id] then
+            table.insert(acceptedJoins, {
+                v_last_A = candidate.v_last_A,
+                v_first_B = candidate.v_first_B
+            })
+            notesInvolved[candidate.note_A_id] = true
+            notesInvolved[candidate.note_B_id] = true
+        end
+    end
+
+    return acceptedJoins
 end
