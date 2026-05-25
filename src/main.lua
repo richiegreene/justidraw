@@ -486,6 +486,10 @@ function love.keypressed(key)
 			selectTool(EnvelopeAlt)
 		elseif key == "h" then
 			selectTool(Envelope)
+		elseif key == "\\" then -- Toggle Envelope brush mode
+            if selectedTool == Envelope then
+                Envelope.toggleMode()
+            end
 		elseif key == "r" then
 			selectTool(SelectRect)
 		elseif key == "l" then
