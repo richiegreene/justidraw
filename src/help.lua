@@ -8,7 +8,7 @@ shortcuts
  M: move
  C: comment
  S: smooth
- F: flatten
+ F: flatten (ctrl/cmd+shift+F: max flatten)
  H: dodge/burn envelope
  < and >: selected envelope
  ?: normalize envelope

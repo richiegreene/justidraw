@@ -54,4 +54,33 @@ function Flatten.mousereleased()
 	Edit.resampleAll()
 end
 
+function Flatten.applyMaxFlatten(tbl)
+	local noteGroups = {}
+	for _, v in ipairs(tbl) do
+		local root = v
+		while root.l do
+			root = root.l
+		end
+		local group = noteGroups[root]
+		if not group then
+			group = {}
+			noteGroups[root] = group
+		end
+		table.insert(group, v)
+	end
+
+	for _, verts in pairs(noteGroups) do
+		if #verts > 0 then
+			local sum = 0
+			for _, v in ipairs(verts) do
+				sum = sum + v.y
+			end
+			local avg = sum / #verts
+			for _, v in ipairs(verts) do
+				v.y = avg
+			end
+		end
+	end
+end
+
 return Flatten

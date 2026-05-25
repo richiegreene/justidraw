@@ -412,6 +412,33 @@ function love.keypressed(key)
 		elseif key == "p" and (modifierKeys.ctrl or modifierKeys.cmd) then
 			selectTool(Snap)
 			Snap.startEditing()
+		elseif key == "f" and modifierKeys.shift and (modifierKeys.ctrl or modifierKeys.cmd) then
+			if not Selection.isEmpty() then
+				Flatten.applyMaxFlatten(Selection.list)
+				Edit.resampleAll()
+				Undo.register()
+				setMessage("max flatten")
+			else
+				local d = math.huge
+				local index = 0
+				for i, v in ipairs(song.track[1]) do
+					local x, y = View.transform(v.x, v.y)
+					local dist = math.sqrt((mouseX - x) ^ 2 + (mouseY - y) ^ 2)
+					if dist < d then
+						index = i
+						d = dist
+					end
+				end
+				if index > 0 then
+					local note = Edit.getNote(song.track[1][index])
+					Flatten.applyMaxFlatten(note)
+					Edit.resampleAll()
+					Undo.register()
+					setMessage("max flatten")
+				else
+					setMessage("select notes to max flatten")
+				end
+			end
 		elseif key == "f" and (modifierKeys.ctrl or modifierKeys.cmd) then
 			if followPlay then
 				followPlay = false
@@ -480,6 +507,33 @@ function love.keypressed(key)
 			selectTool(Comment)
 		elseif key == "s" and not (modifierKeys.ctrl or modifierKeys.cmd) then
 			selectTool(Smooth)
+		elseif key == "f" and modifierKeys.ctrl and modifierKeys.shift then
+			if not Selection.isEmpty() then
+				Flatten.applyMaxFlatten(Selection.list)
+				Edit.resampleAll()
+				Undo.register()
+				setMessage("max flatten")
+			else
+				local d = math.huge
+				local index = 0
+				for i, v in ipairs(song.track[1]) do
+					local x, y = View.transform(v.x, v.y)
+					local dist = math.sqrt((mouseX - x) ^ 2 + (mouseY - y) ^ 2)
+					if dist < d then
+						index = i
+						d = dist
+					end
+				end
+				if index > 0 then
+					local note = Edit.getNote(song.track[1][index])
+					Flatten.applyMaxFlatten(note)
+					Edit.resampleAll()
+					Undo.register()
+					setMessage("max flatten")
+				else
+					setMessage("select notes to max flatten")
+				end
+			end
 		elseif key == "f" then
 			selectTool(Flatten)
 		elseif key == "n" then
