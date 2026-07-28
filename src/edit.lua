@@ -99,6 +99,10 @@ function Edit.join()
 		return
 	end
 
+	table.sort(vlist, function(a, b)
+		return a.x < b.x
+	end)
+
 	if #vlist == 2 then
 		local v1 = vlist[1]
 		local v2 = vlist[2]
