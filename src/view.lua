@@ -121,6 +121,22 @@ function View.draw()
 	local bg_g = Theme.current.background[2]
 	local bg_b = Theme.current.background[3]
 
+	local muted = Edit.mutedParts
+	local muteFade = Theme.current.muteFade
+
+	-- muted parts are greyed out, that is, faded towards the background
+	local function setColor(c, isMuted)
+		if isMuted then
+			love.graphics.setColor(
+				c[1] + (bg_r - c[1]) * muteFade,
+				c[2] + (bg_g - c[2]) * muteFade,
+				c[3] + (bg_b - c[3]) * muteFade
+			)
+		else
+			love.graphics.setColor(c)
+		end
+	end
+
 	for i, v in ipairs(song.track[1]) do
 		if v.r then
 			-- notes assigned to a part are drawn in that part's color
@@ -129,6 +145,10 @@ function View.draw()
 				c = parts[v.part].color
 			end
 			local b = (v.w + v.r.w) * 0.4 + 0.2
+			-- fading the pressure blend is the same as fading the color itself
+			if muted[v.part or 0] then
+				b = b * (1 - muteFade)
+			end
 			love.graphics.setColor(c[1] * b + bg_r * (1 - b), c[2] * b + bg_g * (1 - b), c[3] * b + bg_b * (1 - b))
 			local w1 = v.w * lw
 			local w2 = v.r.w * lw
@@ -156,21 +176,22 @@ function View.draw()
 		local p = v.part and parts[v.part]
 		local highlightColor = p and p.highlight or Theme.current.highlight
 		local vertexColor = p and p.color or Theme.current.vertices
+		local isMuted = muted[v.part or 0]
 
 		if v.r then
 			if Selection.mask[v] and Selection.mask[v.r] then
-				love.graphics.setColor(highlightColor)
+				setColor(highlightColor, isMuted)
 				love.graphics.line(sx * v.x, sy * v.y, sx * v.r.x, sy * v.r.y)
 			elseif Theme.current.showVertices then
-				love.graphics.setColor(vertexColor)
+				setColor(vertexColor, isMuted)
 				love.graphics.line(sx * v.x, sy * v.y, sx * v.r.x, sy * v.r.y)
 			end
 		end
 		if Selection.mask[v] then
-			love.graphics.setColor(highlightColor)
+			setColor(highlightColor, isMuted)
 			love.graphics.ellipse("fill", sx * v.x, sy * v.y, ptSizeSel, ptSizeSel)
 		elseif Theme.current.showVertices then
-			love.graphics.setColor(vertexColor)
+			setColor(vertexColor, isMuted)
 			love.graphics.ellipse("fill", sx * v.x, sy * v.y, ptSizeSel, ptSizeSel)
 		end
 	end

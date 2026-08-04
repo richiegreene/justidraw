@@ -31,6 +31,9 @@ theme.dark = {
 	showGridTime = true,
 	showGridPitch = true,
 
+	-- how far a muted part fades towards the background, 0.0 - 1.0
+	muteFade = 0.75,
+
 	-- width of the notes
 	lineWidth = 65,
 

@@ -63,6 +63,13 @@ With nothing selected, the note under the cursor is used.
 * ctrl+alt+0: clear the part of the selection
 * shift+ctrl+alt+1 .. 4: select every note in that part, anywhere in the project
 * shift+ctrl+alt+0: select every note that has not been assigned to a part
+* alt+1 .. 4: mute a part. Muted notes are greyed out and stop sounding, both
+during playback and in a rendered wav. Muting takes effect straight away, even
+while the song is playing.
+* alt+0: mute the notes that have not been assigned to a part
+
+Parts are stored in the save file, mutes are not: like the reverb and echo
+switches they last for the session only.
 A part always covers a whole note, so selecting a single vertex is enough to
 tag everything connected to it. Joining two notes (`J`, or by drawing one onto
 the end of another) keeps the part of the note on the left, so the joined note
@@ -108,7 +115,8 @@ parts = {
 ```
 Any theme that leaves `parts` out (all of the older ones do) gets the built-in
 palette that suits its background, so existing `user_themes.lua` files keep
-working untouched.
+working untouched. `muteFade` (0.0 - 1.0, 0.75 by default) sets how far a muted
+part fades towards the background.
 
 The yellow bar in top right shows the CPU load, if it gets high you might need to reduce the number of simultaneous notes.
 The green bar shows the peak volume, if it goes red, you should probably reduce the volume (down arrow).

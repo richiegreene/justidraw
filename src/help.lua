@@ -24,6 +24,7 @@ shortcuts
  J: Join notes
  ctrl+alt+1-4: assign part color (0: clear)
  shift+ctrl+alt+1-4: select part (0: unassigned)
+ alt+1-4: mute part (0: unassigned)
  Y: Show harmonic series
  [ and ]: change brush radius
  + and -: change tempo

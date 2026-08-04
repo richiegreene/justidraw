@@ -108,13 +108,19 @@ local function audiocb()
 		-- 100 pixels in one beat
 		M.time = M.time + 4 * 100 * song.bpm / (60 * 44100)
 
+		local muted = Edit.mutedParts
+
 		while M.startTable[M.startIndex] and M.time > M.startTable[M.startIndex].x do
-			for i, v in ipairs(M.voice) do
-				if not v.active then
-					v.vert = M.startTable[M.startIndex]
-					v.active = true
-					v.accum = 0
-					break
+			local start = M.startTable[M.startIndex]
+			-- a muted note is skipped rather than given a voice
+			if not muted[start.part or 0] then
+				for i, v in ipairs(M.voice) do
+					if not v.active then
+						v.vert = start
+						v.active = true
+						v.accum = 0
+						break
+					end
 				end
 			end
 			M.startIndex = M.startIndex + 1
@@ -132,6 +138,10 @@ local function audiocb()
 					local yy = (1 - a) * v.vert.y + a * v.vert.r.y
 					v.delta = fr_to_delta * 2 ^ (-yy / 1200)
 					v.target_amp = amp_curve((1 - a) * v.vert.w + a * v.vert.r.w)
+				end
+				-- muting during playback fades out whatever is already sounding
+				if muted[v.vert.part or 0] then
+					v.target_amp = 0
 				end
 			end
 		end
@@ -232,7 +242,7 @@ function M.update()
 		local j = 1
 
 		for i, v in ipairs(song.track[1]) do
-			if v.r and v.x <= x and v.r.x > x then
+			if v.r and v.x <= x and v.r.x > x and not Edit.mutedParts[v.part or 0] then
 				local a = (x - v.x) / (v.r.x - v.x)
 
 				local yy = (1 - a) * v.y + a * v.r.y

@@ -215,32 +215,95 @@ function types.userdata(x, visited, accum)
     end
 end
 
+-- true when the value is a plain table that has not been written yet, that is,
+-- one the writer has to walk into rather than emit on the spot
+local function is_new_table(x, visited)
+    if type(x) ~= "table" or visited[x] or resources[x] then
+        return false
+    end
+    local mt = getmetatable(x)
+    return not (mt and ids[mt])
+end
+
+--[[
+Tables are written with an explicit stack, for the same reason the reader uses
+one: a long linked list is a table inside a table inside a table, thousands of
+levels deep, and recursing through it runs out of Lua stack. The bytes this
+produces are identical to walking it recursively. (Custom types are still
+written recursively, their arguments are not expected to nest deeply.)
+]]
 function types.table(x, visited, accum)
     if visited[x] then
         accum[#accum + 1] = "\208"
         accum[#accum + 1] = number_to_str(visited[x])
-    else
-        if check_custom_type(x, visited, accum) then return end
-        visited[x] = visited.next
-        visited.next =  visited.next + 1
-        local xlen = #x
+        return
+    end
+    if check_custom_type(x, visited, accum) then return end
+
+    local stack = {}
+    local top = 0
+
+    -- write the header of a table and leave it on the stack to be walked
+    local function open(t)
+        visited[t] = visited.next
+        visited.next = visited.next + 1
+        local xlen = #t
         accum[#accum + 1] = "\207"
         accum[#accum + 1] = number_to_str(xlen)
-        for i = 1, xlen do
-            local v = x[i]
-            types[type(v)](v, visited, accum)
+        top = top + 1
+        local f = stack[top]
+        if not f then
+            f = {}
+            stack[top] = f
         end
-        local key_count = 0
-        for k in pairs(x) do
-            if not_array_index(k, xlen) then
-                key_count = key_count + 1
-            end
-        end
-        accum[#accum + 1] = number_to_str(key_count)
-        for k, v in pairs(x) do
-            if not_array_index(k, xlen) then
-                types[type(k)](k, visited, accum)
+        f.x = t
+        f.xlen = xlen
+        f.i = 0
+        f.key = nil
+        f.counted = false
+    end
+
+    open(x)
+
+    while top > 0 do
+        local f = stack[top]
+        if f.i < f.xlen then
+            -- the array part, in order
+            f.i = f.i + 1
+            local v = f.x[f.i]
+            if is_new_table(v, visited) then
+                open(v)
+            else
                 types[type(v)](v, visited, accum)
+            end
+        else
+            if not f.counted then
+                f.counted = true
+                local key_count = 0
+                for k in pairs(f.x) do
+                    if not_array_index(k, f.xlen) then
+                        key_count = key_count + 1
+                    end
+                end
+                accum[#accum + 1] = number_to_str(key_count)
+            end
+
+            -- then the key/value pairs, one per pass so that a value which is
+            -- itself a table can be walked into before the next pair
+            local k, v = next(f.x, f.key)
+            while k ~= nil and not not_array_index(k, f.xlen) do
+                k, v = next(f.x, k)
+            end
+            if k == nil then
+                top = top - 1
+            else
+                f.key = k
+                types[type(k)](k, visited, accum)
+                if is_new_table(v, visited) then
+                    open(v)
+                else
+                    types[type(v)](v, visited, accum)
+                end
             end
         end
     end
@@ -273,67 +336,151 @@ end
 
 types.thread = function() error("Cannot serialize threads.") end
 
+--[[
+Containers are read with an explicit stack instead of by recursion. A table
+that holds another table serializes as one nested inside the other, so a long
+linked list ends up thousands of levels deep and recursion runs out of Lua
+stack while reading it. The byte format is untouched, this only changes the
+way it is read, and the values it produces are the same.
+]]
 local function deserialize_value(str, index, visited)
-    local t = byte(str, index)
-    if not t then return end
-    if t < 128 then
-        return t - 27, index + 1
-    elseif t < 192 then
-        return byte(str, index + 1) + 0x100 * (t - 128) - 8192, index + 2
-    elseif t == 202 then
-        return nil, index + 1
-    elseif t == 203 then
-        return number_from_str(str, index)
-    elseif t == 204 then
-        return true, index + 1
-    elseif t == 205 then
-        return false, index + 1
-    elseif t == 206 then
-        local length, dataindex = deserialize_value(str, index + 1, visited)
-        local nextindex = dataindex + length
-        local substr = sub(str, dataindex, nextindex - 1)
-        visited[#visited + 1] = substr
-        return substr, nextindex
-    elseif t == 207 then
-        local count, nextindex = number_from_str(str, index + 1)
-        local ret = {}
-        visited[#visited + 1] = ret
-        for i = 1, count do
-            ret[i], nextindex = deserialize_value(str, nextindex, visited)
+    local stack = {}
+    local top = 0
+    -- `value` holds a finished value, `have` says it is waiting to be stored
+    local value
+    local have = false
+
+    while true do
+        if have then
+            if top == 0 then
+                return value, index
+            end
+
+            -- give the value to the container currently being filled
+            local f = stack[top]
+            if f.args then
+                f.i = f.i + 1
+                f.args[f.i] = value
+            elseif f.acount > 0 then
+                f.ai = f.ai + 1
+                f.tbl[f.ai] = value
+                f.acount = f.acount - 1
+            elseif f.haskey then
+                f.tbl[f.key] = value
+                f.haskey = false
+                f.hcount = f.hcount - 1
+            else
+                f.key = value
+                f.haskey = true
+            end
+            have = false
+        else
+            local f = stack[top]
+            if f then
+                -- a container that has been filled becomes a value itself
+                if f.args then
+                    if f.i >= f.n then
+                        value = deserializers[f.name](unpack(f.args))
+                        visited[#visited + 1] = value
+                        have = true
+                    end
+                else
+                    if f.acount == 0 and not f.hcount then
+                        -- the number of key/value pairs follows the array part
+                        f.hcount, index = number_from_str(str, index)
+                    end
+                    if f.acount == 0 and f.hcount == 0 then
+                        value = f.tbl
+                        have = true
+                    end
+                end
+                if have then
+                    -- the frame is kept around to be reused further on
+                    top = top - 1
+                end
+            end
+
+            if not have then
+                local t = byte(str, index)
+                if not t then return end
+                if t < 128 then
+                    value, index = t - 27, index + 1
+                    have = true
+                elseif t < 192 then
+                    value, index = byte(str, index + 1) + 0x100 * (t - 128) - 8192, index + 2
+                    have = true
+                elseif t == 202 then
+                    value, index = nil, index + 1
+                    have = true
+                elseif t == 203 then
+                    value, index = number_from_str(str, index)
+                    have = true
+                elseif t == 204 then
+                    value, index = true, index + 1
+                    have = true
+                elseif t == 205 then
+                    value, index = false, index + 1
+                    have = true
+                elseif t == 206 then
+                    local length, dataindex = number_from_str(str, index + 1)
+                    index = dataindex + length
+                    value = sub(str, dataindex, index - 1)
+                    visited[#visited + 1] = value
+                    have = true
+                elseif t == 207 then
+                    local count
+                    count, index = number_from_str(str, index + 1)
+                    local ret = {}
+                    visited[#visited + 1] = ret
+                    top = top + 1
+                    local frame = stack[top]
+                    if not frame then
+                        frame = {}
+                        stack[top] = frame
+                    end
+                    frame.tbl = ret
+                    frame.args = nil
+                    frame.acount = count
+                    frame.hcount = nil
+                    frame.ai = 0
+                    frame.haskey = false
+                elseif t == 208 then
+                    local ref
+                    ref, index = number_from_str(str, index + 1)
+                    value = visited[ref]
+                    have = true
+                elseif t == 209 then
+                    -- the name is a string, reading it cannot nest
+                    local name, nextindex = deserialize_value(str, index + 1, visited)
+                    local count
+                    count, index = number_from_str(str, nextindex)
+                    top = top + 1
+                    local frame = stack[top]
+                    if not frame then
+                        frame = {}
+                        stack[top] = frame
+                    end
+                    frame.tbl = nil
+                    frame.args = {}
+                    frame.name = name
+                    frame.i = 0
+                    frame.n = count
+                elseif t == 210 then
+                    local length, dataindex = number_from_str(str, index + 1)
+                    index = dataindex + length
+                    value = loadstring(sub(str, dataindex, index - 1))
+                    visited[#visited + 1] = value
+                    have = true
+                elseif t == 211 then
+                    local res
+                    res, index = deserialize_value(str, index + 1, visited)
+                    value = resources_by_name[res]
+                    have = true
+                else
+                    error("Could not deserialize type byte " .. t .. ".")
+                end
+            end
         end
-        count, nextindex = number_from_str(str, nextindex)
-        for i = 1, count do
-            local k, v
-            k, nextindex = deserialize_value(str, nextindex, visited)
-            v, nextindex = deserialize_value(str, nextindex, visited)
-            ret[k] = v
-        end
-        return ret, nextindex
-    elseif t == 208 then
-        local ref, nextindex = number_from_str(str, index + 1)
-        return visited[ref], nextindex
-    elseif t == 209 then
-        local count
-        local name, nextindex = deserialize_value(str, index + 1, visited)
-        count, nextindex = number_from_str(str, nextindex)
-        local args = {}
-        for i = 1, count do
-            args[i], nextindex = deserialize_value(str, nextindex, visited)
-        end
-        local ret = deserializers[name](unpack(args))
-        visited[#visited + 1] = ret
-        return ret, nextindex
-    elseif t == 210 then
-        local length, dataindex = deserialize_value(str, index + 1, visited)
-        local nextindex = dataindex + length
-        local ret = loadstring(sub(str, dataindex, nextindex - 1))
-        visited[#visited + 1] = ret
-        return ret, nextindex
-    elseif t == 211 then
-        local res, nextindex = deserialize_value(str, index + 1, visited)
-        return resources_by_name[res], nextindex
-    else
-        error("Could not deserialize type byte " .. t .. ".")
     end
 end
 

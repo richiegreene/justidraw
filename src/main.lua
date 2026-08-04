@@ -90,6 +90,20 @@ function setMessage(m)
 	table.insert(messageList, { m, MESSAGE_TIME })
 end
 
+-- 1 to 4 pick a part, 0 stands for the notes without one
+local function isPartKey(key)
+	local n = tonumber(key)
+	return n ~= nil and #key == 1 and n >= 0 and n <= Theme.PART_COUNT
+end
+
+local function partNumber(key)
+	local n = tonumber(key)
+	if n == 0 then
+		return nil
+	end
+	return n
+end
+
 function love.load()
 	math.randomseed(os.time())
 	Theme.load()
@@ -346,7 +360,7 @@ function love.draw()
 	end
 end
 
-function love.keypressed(key)
+function love.keypressed(key, scancode, isrepeat)
 	if key == "lshift" or key == "rshift" then
 		modifierKeys.shift = true
 	elseif key == "lctrl" or key == "rctrl" then
@@ -560,14 +574,16 @@ function love.keypressed(key)
 			Edit.join()
 			Edit.resampleAll()
 		elseif
-			(key == "0" or key == "1" or key == "2" or key == "3" or key == "4")
-			and modifierKeys.alt
-			and (modifierKeys.ctrl or modifierKeys.cmd)
+			--[[
+			the part shortcuts all toggle something, so they only ever act on a
+			real key press. holding one down must not repeat: macOS suppresses
+			key repeat while cmd is held and starts it the moment cmd is let
+			go, which would turn the tail of ctrl/cmd+alt+N into a bare alt+N
+			and silently mute the part that was just assigned.
+			]]
+			isPartKey(key) and modifierKeys.alt and (modifierKeys.ctrl or modifierKeys.cmd) and not isrepeat
 		then
-			local part = tonumber(key)
-			if part == 0 then
-				part = nil
-			end
+			local part = partNumber(key)
 			if modifierKeys.shift then
 				-- select every note in the part
 				Edit.selectPart(part)
@@ -575,6 +591,11 @@ function love.keypressed(key)
 				-- assign the selected notes (or the note under the cursor) to a part
 				Edit.assignPart(part)
 			end
+		elseif
+			-- alt on its own mutes a part
+			isPartKey(key) and modifierKeys.alt and not (modifierKeys.ctrl or modifierKeys.cmd) and not isrepeat
+		then
+			Edit.toggleMute(partNumber(key))
 		elseif key == "d" and modifierKeys.shift then
 			Clipboard.duplicate()
 		elseif key == "d" then

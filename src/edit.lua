@@ -162,6 +162,26 @@ function Edit.assignPart(part)
 	Undo.register()
 end
 
+--[[
+parts that are silenced during playback, keyed by part number, with 0 standing
+in for the unassigned notes. like the echo/reverb/preview switches this is a
+session setting, it is not written to the save file.
+]]
+Edit.mutedParts = {}
+
+function Edit.toggleMute(part)
+	local i = part or 0
+	local name = part and ("part " .. part) or "unassigned"
+
+	if Edit.mutedParts[i] then
+		Edit.mutedParts[i] = nil
+		setMessage(name .. ": unmuted")
+	else
+		Edit.mutedParts[i] = true
+		setMessage(name .. ": muted")
+	end
+end
+
 -- select every note in the project belonging to a part (nil selects the
 -- notes that have not been assigned to one)
 function Edit.selectPart(part)
