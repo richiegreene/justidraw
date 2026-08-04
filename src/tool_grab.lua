@@ -14,7 +14,7 @@ function Grab.mousepressed()
 	local tbl
 	local list
 	if Selection.isEmpty() then
-		tbl = song.track[1]
+		tbl = Edit.editable()
 
 		local d = math.huge
 		local index = 0

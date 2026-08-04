@@ -21,7 +21,7 @@ function Envelope.mousepressed()
 	Envelope.x = mouseX
 	Envelope.y = mouseY
 	if Selection.isEmpty() then
-		Envelope.table = song.track[1]
+		Envelope.table = Edit.editable()
 	else
 		Envelope.table = Selection.list
 	end

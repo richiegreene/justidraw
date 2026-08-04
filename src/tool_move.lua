@@ -16,7 +16,7 @@ function Move.mousepressed()
 	local tbl
 	local list
 	if Selection.isEmpty() then
-		tbl = song.track[1]
+		tbl = Edit.editable()
 		local d = math.huge
 		local index = 0
 		for i, v in ipairs(tbl) do
@@ -29,7 +29,7 @@ function Move.mousepressed()
 			end
 		end
 
-		local vert = song.track[1][index]
+		local vert = tbl[index]
 
 		list = Edit.getNote(vert)
 	else

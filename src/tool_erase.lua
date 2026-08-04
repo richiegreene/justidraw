@@ -6,7 +6,7 @@ Erase.name = "erase"
 function Erase.mousepressed()
 	Erase.list = {}
 	if Selection.isEmpty() then
-		Erase.list = song.track[1]
+		Erase.list = Edit.editable()
 	else
 		Erase.list = Selection.list
 	end

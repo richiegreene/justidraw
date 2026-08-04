@@ -6,6 +6,13 @@ function Selection.init()
 end
 
 function Selection.set(mask)
+	-- notes in a muted part are locked, they cannot be picked up
+	for v in pairs(mask) do
+		if Edit.isLocked(v) then
+			mask[v] = nil
+		end
+	end
+
 	if selectNotes then
 		local newmask = {}
 
@@ -76,7 +83,10 @@ function Selection.setFromIndices(list)
 	Selection.mask = {}
 	for i, v in ipairs(list) do
 		local vert = song.track[1][v]
-		Selection.mask[vert] = true
+		-- a selection from before a part was muted must not come back locked
+		if vert and not Edit.isLocked(vert) then
+			Selection.mask[vert] = true
+		end
 	end
 	Selection.refresh()
 end

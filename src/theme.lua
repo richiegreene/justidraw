@@ -3,7 +3,7 @@ local Theme = {}
 Theme.default = require("theme_default")
 
 -- number of assignable note parts, see Edit.assignPart
-Theme.PART_COUNT = 4
+Theme.PART_COUNT = 9
 
 local function fromHex(rgba)
 	local rb = tonumber(string.sub(rgba, 2, 3), 16)
@@ -63,15 +63,17 @@ local function normalizeParts(th)
 	local given = th.parts or {}
 	th.parts = {}
 	for i = 1, Theme.PART_COUNT do
+		-- wrap around, in case there are ever more parts than palette entries
+		local fb = fallback[(i - 1) % #fallback + 1]
 		local p = given[i]
 		if type(p) ~= "table" then
-			p = copy(fallback[i])
+			p = copy(fb)
 		elseif p[1] ~= nil then
 			-- a bare color instead of a { color = ..., highlight = ... } pair
 			p = { color = p }
 		end
 		if p.color == nil then
-			p.color = copy(fallback[i].color)
+			p.color = copy(fb.color)
 		end
 		if p.highlight == nil then
 			p.highlight = tint(p.color, 0.45)

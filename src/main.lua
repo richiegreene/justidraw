@@ -437,9 +437,10 @@ function love.keypressed(key, scancode, isrepeat)
 				Undo.register()
 				setMessage("max flatten")
 			else
+				local tbl = Edit.editable()
 				local d = math.huge
 				local index = 0
-				for i, v in ipairs(song.track[1]) do
+				for i, v in ipairs(tbl) do
 					local x, y = View.transform(v.x, v.y)
 					local dist = math.sqrt((mouseX - x) ^ 2 + (mouseY - y) ^ 2)
 					if dist < d then
@@ -448,7 +449,7 @@ function love.keypressed(key, scancode, isrepeat)
 					end
 				end
 				if index > 0 then
-					local note = Edit.getNote(song.track[1][index])
+					local note = Edit.getNote(tbl[index])
 					Flatten.applyMaxFlatten(note)
 					Edit.resampleAll()
 					Undo.register()
@@ -532,9 +533,10 @@ function love.keypressed(key, scancode, isrepeat)
 				Undo.register()
 				setMessage("max flatten")
 			else
+				local tbl = Edit.editable()
 				local d = math.huge
 				local index = 0
-				for i, v in ipairs(song.track[1]) do
+				for i, v in ipairs(tbl) do
 					local x, y = View.transform(v.x, v.y)
 					local dist = math.sqrt((mouseX - x) ^ 2 + (mouseY - y) ^ 2)
 					if dist < d then
@@ -543,7 +545,7 @@ function love.keypressed(key, scancode, isrepeat)
 					end
 				end
 				if index > 0 then
-					local note = Edit.getNote(song.track[1][index])
+					local note = Edit.getNote(tbl[index])
 					Flatten.applyMaxFlatten(note)
 					Edit.resampleAll()
 					Undo.register()

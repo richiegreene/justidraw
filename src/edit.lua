@@ -33,7 +33,10 @@ function Edit.addNote(list)
 		table.insert(song.track[1], pts[i])
 	end
 
-	for i, v in ipairs(song.track[1]) do
+	-- a locked note must not be joined onto, so only automerge with the rest
+	local candidates = Edit.editable()
+
+	for i, v in ipairs(candidates) do
 		if not v.l then
 			local dist = math.sqrt((last.x - v.x) ^ 2 + (last.y - v.y) ^ 2)
 			if dist < automergeDist and v ~= first then
@@ -43,7 +46,7 @@ function Edit.addNote(list)
 		end
 	end
 
-	for i, v in ipairs(song.track[1]) do
+	for i, v in ipairs(candidates) do
 		if not v.r then
 			local dist = math.sqrt((first.x - v.x) ^ 2 + (first.y - v.y) ^ 2)
 			if dist < automergeDist and v ~= last then
@@ -113,7 +116,7 @@ end
 function Edit.noteAtCursor()
 	local d = PART_PICK_DIST
 	local found = nil
-	for _, v in ipairs(song.track[1]) do
+	for _, v in ipairs(Edit.editable()) do
 		local x, y = View.transform(v.x, v.y)
 		local dist = math.sqrt((mouseX - x) ^ 2 + (mouseY - y) ^ 2)
 		if dist < d then
@@ -168,6 +171,28 @@ in for the unassigned notes. like the echo/reverb/preview switches this is a
 session setting, it is not written to the save file.
 ]]
 Edit.mutedParts = {}
+local anyMuted = false
+
+-- a muted part is locked: it still shows, greyed out, but it cannot be
+-- selected or edited, so it stays put as a backdrop to work against
+function Edit.isLocked(vert)
+	return Edit.mutedParts[vert.part or 0] == true
+end
+
+-- the vertices the tools are allowed to touch. with nothing muted this is the
+-- track itself, so the usual case costs nothing
+function Edit.editable()
+	if not anyMuted then
+		return song.track[1]
+	end
+	local list = {}
+	for _, v in ipairs(song.track[1]) do
+		if not Edit.mutedParts[v.part or 0] then
+			list[#list + 1] = v
+		end
+	end
+	return list
+end
 
 function Edit.toggleMute(part)
 	local i = part or 0
@@ -178,13 +203,33 @@ function Edit.toggleMute(part)
 		setMessage(name .. ": unmuted")
 	else
 		Edit.mutedParts[i] = true
-		setMessage(name .. ": muted")
+		-- locking notes that are currently selected would leave them editable
+		-- through the selection, so drop them from it
+		for v in pairs(Selection.mask) do
+			if (v.part or 0) == i then
+				Selection.mask[v] = nil
+			end
+		end
+		Selection.refresh()
+		setMessage(name .. ": muted (locked)")
+	end
+
+	anyMuted = false
+	for _ in pairs(Edit.mutedParts) do
+		anyMuted = true
 	end
 end
 
 -- select every note in the project belonging to a part (nil selects the
 -- notes that have not been assigned to one)
 function Edit.selectPart(part)
+	local name = part and ("part " .. part) or "unassigned"
+
+	if Edit.mutedParts[part or 0] then
+		setMessage(name .. " is muted (locked)")
+		return
+	end
+
 	local mask = {}
 	local count = 0
 	for _, v in ipairs(song.track[1]) do
@@ -195,8 +240,6 @@ function Edit.selectPart(part)
 			end
 		end
 	end
-
-	local name = part and ("part " .. part) or "unassigned"
 
 	if count == 0 then
 		setMessage("nothing in " .. name)

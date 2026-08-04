@@ -14,7 +14,7 @@ function Stretch.mousepressed()
 
 	local selected
 	if Selection.isEmpty() then
-		selected = song.track[1]
+		selected = Edit.editable()
 	else
 		selected = Selection.list
 	end

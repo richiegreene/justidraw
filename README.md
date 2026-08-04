@@ -54,19 +54,24 @@ macOS and Linux work but only mouse input.
 * J: Join ends of selected notes
 * shift+n: toggle between selecting notes or vertices
 ### Parts
-Notes can be tagged with one of four parts so that separate voices are easy to
+Notes can be tagged with one of nine parts so that separate voices are easy to
 tell apart. Each part draws in its own color, with a matching highlight color
 when selected. Untagged notes keep the normal theme colors.
-* ctrl+alt+1 .. 4: assign the selection to a part (cmd+option on macOS).
+* ctrl+alt+1 .. 9: assign the selection to a part (cmd+option on macOS).
 Pressing the same combination again clears it back to the default color.
 With nothing selected, the note under the cursor is used.
 * ctrl+alt+0: clear the part of the selection
-* shift+ctrl+alt+1 .. 4: select every note in that part, anywhere in the project
+* shift+ctrl+alt+1 .. 9: select every note in that part, anywhere in the project
 * shift+ctrl+alt+0: select every note that has not been assigned to a part
-* alt+1 .. 4: mute a part. Muted notes are greyed out and stop sounding, both
+* alt+1 .. 9: mute a part. Muted notes are greyed out and stop sounding, both
 during playback and in a rendered wav. Muting takes effect straight away, even
 while the song is playing.
 * alt+0: mute the notes that have not been assigned to a part
+
+A muted part is also locked. It cannot be selected, erased, grabbed, moved,
+smoothed, flattened, smudged or drawn onto, and new notes will not join onto
+it, so it sits there as a fixed backdrop to work against. Anything of it that
+was selected is released when you mute it. Unmute to edit it again.
 
 Parts are stored in the save file, mutes are not: like the reverb and echo
 switches they last for the session only.

@@ -13,7 +13,7 @@ function Smudge.mousepressed()
 	Smudge.x = mouseX
 	Smudge.y = mouseY
 	if Selection.isEmpty() then
-		Smudge.table = song.track[1]
+		Smudge.table = Edit.editable()
 	else
 		Smudge.table = Selection.list
 	end

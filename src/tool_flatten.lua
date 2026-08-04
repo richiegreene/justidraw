@@ -9,9 +9,10 @@ function Flatten.mousepressed()
 	Flatten.y = mouseY
 
 	if Selection.isEmpty() then
+		local tbl = Edit.editable()
 		local d = math.huge
 		local index = 0
-		for i, v in ipairs(song.track[1]) do
+		for i, v in ipairs(tbl) do
 			local x, y = View.transform(v.x, v.y)
 			local dist = math.sqrt((mouseX - x) ^ 2 + (mouseY - y) ^ 2)
 
@@ -21,7 +22,7 @@ function Flatten.mousepressed()
 			end
 		end
 
-		local vert = song.track[1][index]
+		local vert = tbl[index]
 
 		Flatten.table = Edit.getNote(vert)
 	else
