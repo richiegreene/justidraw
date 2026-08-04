@@ -564,12 +564,17 @@ function love.keypressed(key)
 			and modifierKeys.alt
 			and (modifierKeys.ctrl or modifierKeys.cmd)
 		then
-			-- assign the selected notes (or the note under the cursor) to a part
 			local part = tonumber(key)
 			if part == 0 then
 				part = nil
 			end
-			Edit.assignPart(part)
+			if modifierKeys.shift then
+				-- select every note in the part
+				Edit.selectPart(part)
+			else
+				-- assign the selected notes (or the note under the cursor) to a part
+				Edit.assignPart(part)
+			end
 		elseif key == "d" and modifierKeys.shift then
 			Clipboard.duplicate()
 		elseif key == "d" then

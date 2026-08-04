@@ -61,6 +61,8 @@ when selected. Untagged notes keep the normal theme colors.
 Pressing the same combination again clears it back to the default color.
 With nothing selected, the note under the cursor is used.
 * ctrl+alt+0: clear the part of the selection
+* shift+ctrl+alt+1 .. 4: select every note in that part, anywhere in the project
+* shift+ctrl+alt+0: select every note that has not been assigned to a part
 A part always covers a whole note, so selecting a single vertex is enough to
 tag everything connected to it. Joining two notes (`J`, or by drawing one onto
 the end of another) keeps the part of the note on the left, so the joined note

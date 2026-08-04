@@ -162,6 +162,32 @@ function Edit.assignPart(part)
 	Undo.register()
 end
 
+-- select every note in the project belonging to a part (nil selects the
+-- notes that have not been assigned to one)
+function Edit.selectPart(part)
+	local mask = {}
+	local count = 0
+	for _, v in ipairs(song.track[1]) do
+		if v.part == part then
+			mask[v] = true
+			if not v.l then
+				count = count + 1
+			end
+		end
+	end
+
+	local name = part and ("part " .. part) or "unassigned"
+
+	if count == 0 then
+		setMessage("nothing in " .. name)
+		return
+	end
+
+	Selection.setNormal(mask)
+	setMessage("selected " .. name .. " (" .. count .. (count == 1 and " note)" or " notes)"))
+	Undo.register()
+end
+
 function Edit.join()
 	if #Selection.list == 0 then
 		setMessage("selection is empty")
