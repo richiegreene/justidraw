@@ -72,6 +72,8 @@ modifierKeys.cmd = false
 
 -- local mainFont = love.graphics.newFont(22)
 local smallFont = love.graphics.newFont(16)
+-- the shortcut list is long, give it a font of its own so it fits on screen
+local helpFont = love.graphics.newFont(12)
 
 minLength = 50
 automergeDist = 50
@@ -282,11 +284,13 @@ function love.draw()
 	if love.keyboard.isDown("i") and not textInput then
 		local c = Theme.current.background
 		love.graphics.setColor(c[1], c[2], c[3], 0.65)
-		local w = font:getWidth(helpString)
-		love.graphics.rectangle("fill", 0, 0, w + 20, font_h * helpStringSize + 20)
+		local w = helpFont:getWidth(helpString)
+		love.graphics.rectangle("fill", 0, 0, w + 20, helpFont:getHeight() * helpStringSize + 20)
 
 		love.graphics.setColor(Theme.current.text)
+		love.graphics.setFont(helpFont)
 		love.graphics.print(helpString, 10, 10)
+		love.graphics.setFont(smallFont)
 	elseif Theme.current.showTooltip then
 		love.graphics.setColor(Theme.current.text)
 		love.graphics.print(selectedTool.name, 10, 10)
@@ -555,6 +559,17 @@ function love.keypressed(key)
 		elseif key == "j" then
 			Edit.join()
 			Edit.resampleAll()
+		elseif
+			(key == "0" or key == "1" or key == "2" or key == "3" or key == "4")
+			and modifierKeys.alt
+			and (modifierKeys.ctrl or modifierKeys.cmd)
+		then
+			-- assign the selected notes (or the note under the cursor) to a part
+			local part = tonumber(key)
+			if part == 0 then
+				part = nil
+			end
+			Edit.assignPart(part)
 		elseif key == "d" and modifierKeys.shift then
 			Clipboard.duplicate()
 		elseif key == "d" then

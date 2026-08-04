@@ -53,6 +53,18 @@ macOS and Linux work but only mouse input.
 * Delete / backspace: delete selection. With nothing selected, opens a new project.
 * J: Join ends of selected notes
 * shift+n: toggle between selecting notes or vertices
+### Parts
+Notes can be tagged with one of four parts so that separate voices are easy to
+tell apart. Each part draws in its own color, with a matching highlight color
+when selected. Untagged notes keep the normal theme colors.
+* ctrl+alt+1 .. 4: assign the selection to a part (cmd+option on macOS).
+Pressing the same combination again clears it back to the default color.
+With nothing selected, the note under the cursor is used.
+* ctrl+alt+0: clear the part of the selection
+A part always covers a whole note, so selecting a single vertex is enough to
+tag everything connected to it. Joining two notes (`J`, or by drawing one onto
+the end of another) keeps the part of the note on the left, so the joined note
+ends up in one color.
 ### File
 * Space: play/pause
 * ctrl+Z: undo
@@ -82,6 +94,19 @@ New projects get a randomly generated name, rename them with `ctrl+N`.
 
 You will find a file `user_themes.lua` in your save directory.
 Edit it to define custom themes (requires restart).
+
+Part colors are part of the theme, under the `parts` key:
+```lua
+parts = {
+	{ color = "#ff8a2b", highlight = "#ffc46b" },
+	{ color = "#3fcf6e" }, -- highlight is optional, a lighter tint is used
+	"#a472ff",             -- so is the table, a bare color works too
+	{ 1.0, 0.3, 0.49 },
+}
+```
+Any theme that leaves `parts` out (all of the older ones do) gets the built-in
+palette that suits its background, so existing `user_themes.lua` files keep
+working untouched.
 
 The yellow bar in top right shows the CPU load, if it gets high you might need to reduce the number of simultaneous notes.
 The green bar shows the peak volume, if it goes red, you should probably reduce the volume (down arrow).

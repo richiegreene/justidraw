@@ -77,6 +77,91 @@ function Edit.add(list)
 	end
 end
 
+--[[
+parts
+a note can be tagged with a part number (1 .. Theme.PART_COUNT) to draw it in
+its own color. `part == nil` means unassigned, which draws with the theme
+defaults. the tag sits on every vertex of the note so that it survives
+splitting, erasing, resampling and duplicating.
+]]
+
+-- how far the cursor may be from a note when nothing is selected (pixels)
+local PART_PICK_DIST = 60
+
+function Edit.setNotePart(vert, part)
+	for _, v in ipairs(Edit.getNote(vert)) do
+		v.part = part
+	end
+end
+
+-- first vertex of every note touched by the selection
+function Edit.selectedNotes()
+	local seen = {}
+	local heads = {}
+	for v in pairs(Selection.mask) do
+		while v.l do
+			v = v.l
+		end
+		if not seen[v] then
+			seen[v] = true
+			table.insert(heads, v)
+		end
+	end
+	return heads
+end
+
+function Edit.noteAtCursor()
+	local d = PART_PICK_DIST
+	local found = nil
+	for _, v in ipairs(song.track[1]) do
+		local x, y = View.transform(v.x, v.y)
+		local dist = math.sqrt((mouseX - x) ^ 2 + (mouseY - y) ^ 2)
+		if dist < d then
+			found = v
+			d = dist
+		end
+	end
+	return found
+end
+
+function Edit.assignPart(part)
+	local notes = Edit.selectedNotes()
+	if #notes == 0 then
+		local v = Edit.noteAtCursor()
+		if v then
+			notes = { v }
+		end
+	end
+	if #notes == 0 then
+		setMessage("select a note to assign a part")
+		return
+	end
+
+	-- assigning the part a note already has toggles it back to default
+	if part then
+		local same = true
+		for _, v in ipairs(notes) do
+			if v.part ~= part then
+				same = false
+			end
+		end
+		if same then
+			part = nil
+		end
+	end
+
+	for _, v in ipairs(notes) do
+		Edit.setNotePart(v, part)
+	end
+
+	if part then
+		setMessage("part " .. part)
+	else
+		setMessage("part: none")
+	end
+	Undo.register()
+end
+
 function Edit.join()
 	if #Selection.list == 0 then
 		setMessage("selection is empty")
@@ -135,12 +220,18 @@ function Edit.merge(v1, v2)
 	local newx = (v1.x + v2.x) * 0.5
 
 	if v1.l.x < newx and newx < v2.r.x then
+		-- the note on the left keeps its part, so joining overrides the one
+		-- on the right. an unassigned left note inherits instead of wiping.
+		local part = v1.part or v2.part
+
 		v1.x = newx
 		v1.y = (v1.y + v2.y) * 0.5
 		v1.w = math.max(v1.w, v2.w)
 
 		v1.r = v2.r
 		v2.r.l = v1
+
+		Edit.setNotePart(v1, part)
 
 		for i, v in ipairs(song.track[1]) do
 			if v == v2 then
@@ -229,7 +320,7 @@ function Edit.resampleAll()
 					local ny = (v.y + v.r.y) * 0.5
 					local nw = (v.w + v.r.w) * 0.5
 
-					local new = { x = nx, y = ny, w = nw }
+					local new = { x = nx, y = ny, w = nw, part = v.part }
 
 					v.r = new
 					nextv.l = new

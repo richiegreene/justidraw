@@ -114,9 +114,8 @@ function View.draw()
 	-- variable width lines showing pressure
 	local lw = Theme.current.lineWidth
 	-- love.graphics.setColor(Theme.current.envelope)
-	local env_r = Theme.current.envelope[1]
-	local env_g = Theme.current.envelope[2]
-	local env_b = Theme.current.envelope[3]
+	local envelope = Theme.current.envelope
+	local parts = Theme.current.parts
 
 	local bg_r = Theme.current.background[1]
 	local bg_g = Theme.current.background[2]
@@ -124,8 +123,13 @@ function View.draw()
 
 	for i, v in ipairs(song.track[1]) do
 		if v.r then
+			-- notes assigned to a part are drawn in that part's color
+			local c = envelope
+			if v.part and parts[v.part] then
+				c = parts[v.part].color
+			end
 			local b = (v.w + v.r.w) * 0.4 + 0.2
-			love.graphics.setColor(env_r * b + bg_r * (1 - b), env_g * b + bg_g * (1 - b), env_b * b + bg_b * (1 - b))
+			love.graphics.setColor(c[1] * b + bg_r * (1 - b), c[2] * b + bg_g * (1 - b), c[3] * b + bg_b * (1 - b))
 			local w1 = v.w * lw
 			local w2 = v.r.w * lw
 			love.graphics.polygon(
@@ -148,20 +152,25 @@ function View.draw()
 	local ptSizeSel = math.max(ptSize * 1.2, 2)
 
 	for i, v in ipairs(song.track[1]) do
+		-- a part brings its own pair of colors along
+		local p = v.part and parts[v.part]
+		local highlightColor = p and p.highlight or Theme.current.highlight
+		local vertexColor = p and p.color or Theme.current.vertices
+
 		if v.r then
 			if Selection.mask[v] and Selection.mask[v.r] then
-				love.graphics.setColor(Theme.current.highlight)
+				love.graphics.setColor(highlightColor)
 				love.graphics.line(sx * v.x, sy * v.y, sx * v.r.x, sy * v.r.y)
 			elseif Theme.current.showVertices then
-				love.graphics.setColor(Theme.current.vertices)
+				love.graphics.setColor(vertexColor)
 				love.graphics.line(sx * v.x, sy * v.y, sx * v.r.x, sy * v.r.y)
 			end
 		end
 		if Selection.mask[v] then
-			love.graphics.setColor(Theme.current.highlight)
+			love.graphics.setColor(highlightColor)
 			love.graphics.ellipse("fill", sx * v.x, sy * v.y, ptSizeSel, ptSizeSel)
 		elseif Theme.current.showVertices then
-			love.graphics.setColor(Theme.current.vertices)
+			love.graphics.setColor(vertexColor)
 			love.graphics.ellipse("fill", sx * v.x, sy * v.y, ptSizeSel, ptSizeSel)
 		end
 	end

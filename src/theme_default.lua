@@ -15,6 +15,18 @@ theme.dark = {
 	vertices = { 0.8, 0.8, 0.8 },
 	showVertices = true,
 
+	-- up to four assignable parts, set with ctrl/cmd+alt+1 .. 4
+	-- `color` replaces `envelope`, `highlight` replaces `highlight` for that note
+	-- `highlight` is optional, a lighter tint of `color` is used when it is missing
+	-- a theme without `parts` borrows the dark or light palette below,
+	-- whichever suits its background
+	parts = {
+		{ color = "#ff8a2b", highlight = "#ffc46b" },
+		{ color = "#3fcf6e", highlight = "#8cf0ae" },
+		{ color = "#a472ff", highlight = "#cdb4ff" },
+		{ color = "#ff4d7e", highlight = "#ff9fbb" },
+	},
+
 	grid = { 0.9, 0.9, 0.9 },
 	showGridTime = true,
 	showGridPitch = true,
@@ -36,6 +48,13 @@ theme.light = {
 	playhead = { 0.3, 0.3, 0.3 },
 	draw = { 0.6, 0.2, 0.2 },
 	vertices = { 0.2, 0.2, 0.2 },
+
+	parts = {
+		{ color = "#a85200", highlight = "#e88a1f" },
+		{ color = "#1b6b36", highlight = "#35a85e" },
+		{ color = "#4b2a99", highlight = "#7b5cd6" },
+		{ color = "#a3123a", highlight = "#e04a6e" },
+	},
 }
 
 theme.pink = {
@@ -48,6 +67,13 @@ theme.pink = {
 	playhead = "#642ca9",
 	cursor = "#642ca9",
 	vertices = "#B231AA",
+
+	parts = {
+		{ color = "#d95f00", highlight = "#ff9a33" },
+		{ color = "#147a5c", highlight = "#26b389" },
+		{ color = "#2b4fc7", highlight = "#5c82ff" },
+		{ color = "#8c0e2c", highlight = "#d13757" },
+	},
 }
 
 theme.minimal = {

@@ -22,6 +22,7 @@ shortcuts
  shift+N: toggle selecting notes or vertices
  shift+D: duplicate selection
  J: Join notes
+ ctrl+alt+1-4: assign part color (0: clear)
  Y: Show harmonic series
  [ and ]: change brush radius
  + and -: change tempo
