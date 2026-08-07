@@ -423,6 +423,9 @@ function love.keypressed(key, scancode, isrepeat)
 			Theme.next()
 		elseif key == "b" and (modifierKeys.ctrl or modifierKeys.cmd) then
 			Audio.nextSynth()
+		elseif key == "v" and (modifierKeys.ctrl or modifierKeys.cmd) then
+			-- how far apart vertices are allowed to get, which is how far V can thin
+			Edit.cycleResampleDist()
 		elseif key == "n" and (modifierKeys.ctrl or modifierKeys.cmd) then
 			print(song.name)
 			textEntered = song.name
@@ -575,6 +578,15 @@ function love.keypressed(key, scancode, isrepeat)
 		elseif key == "j" then
 			Edit.join()
 			Edit.resampleAll()
+		--[[
+		vertex density of the selection (or of the note under the cursor when
+		nothing is selected). key repeat would make these run away, and
+		densifying doubles every time, so only act on a real press.
+		]]
+		elseif key == "v" and modifierKeys.shift and not isrepeat then
+			Edit.densify()
+		elseif key == "v" and not isrepeat then
+			Edit.thin()
 		elseif
 			--[[
 			the part shortcuts all toggle something, so they only ever act on a

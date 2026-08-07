@@ -385,6 +385,229 @@ function Edit.getTangent(pt)
 	end
 end
 
+--[[
+vertex density
+
+the synth walks the vertex list and interpolates pitch and amplitude linearly
+between neighbours (audio.lua), so the shape of a note between two vertices is
+a straight line, in both senses. that makes the vertex count a free parameter:
+a vertex that already lies on the line between the two around it can be dropped
+without changing a single sample, and a point inserted on that line is the value
+the synth was interpolating anyway.
+
+`resampleDist` is the longest segment resampleAll will leave alone. it is also
+the widest gap thinning is allowed to open, so a thinned note is stable: no
+later edit fills it back in. raise it to thin further.
+]]
+Edit.resampleDist = 80
+local RESAMPLE_STEPS = { 80, 200, 400, 800 }
+
+Edit.thinTolY = 3 -- cents
+Edit.thinTolW = 0.03 -- pressure, 0 .. 1
+Edit.minSplit = 2 -- never subdivide a segment shorter than this (pixels)
+
+function Edit.cycleResampleDist()
+	local i = 1
+	for k, v in ipairs(RESAMPLE_STEPS) do
+		if v == Edit.resampleDist then
+			i = k
+		end
+	end
+	i = i % #RESAMPLE_STEPS + 1
+	Edit.resampleDist = RESAMPLE_STEPS[i]
+	setMessage("max segment: " .. Edit.resampleDist .. "px (" .. (Edit.resampleDist / 100) .. " beats)")
+end
+
+--[[
+the stretches of vertices the density commands work on: every maximal chain of
+neighbouring selected vertices inside a note. a partly selected note gives a run
+that stops at the selection edge, and the vertices on that edge are anchors, so
+the part you did not select keeps its shape exactly.
+
+with nothing selected the note under the cursor is used, like the smooth tool.
+]]
+function Edit.selectedRuns()
+	local mask = Selection.mask
+	local heads
+
+	if Selection.isEmpty() then
+		local v = Edit.noteAtCursor()
+		if not v then
+			return nil
+		end
+		local note = Edit.getNote(v)
+		mask = {}
+		for _, p in ipairs(note) do
+			mask[p] = true
+		end
+		heads = { note[1] }
+	else
+		heads = Edit.selectedNotes()
+	end
+
+	local runs = {}
+	for _, h in ipairs(heads) do
+		local run = nil
+		local v = h
+		while v do
+			if mask[v] and not Edit.isLocked(v) then
+				run = run or {}
+				run[#run + 1] = v
+			elseif run then
+				runs[#runs + 1] = run
+				run = nil
+			end
+			v = v.r
+		end
+		if run then
+			runs[#runs + 1] = run
+		end
+	end
+	return runs
+end
+
+-- drop a set of vertices from the track in one pass. removing them one at a
+-- time would be quadratic, and these commands remove tens of thousands at once
+local function compact(doomed)
+	local track = song.track[1]
+	local j = 0
+	for i = 1, #track do
+		local v = track[i]
+		if doomed[v] then
+			Selection.mask[v] = nil
+		else
+			j = j + 1
+			track[j] = v
+		end
+	end
+	for i = #track, j + 1, -1 do
+		track[i] = nil
+	end
+end
+
+--[[
+one thinning pass. every second vertex is a candidate, and a candidate is only
+removed when the line that would replace it passes within tolerance of it, so
+each press is at most a halving and the error it introduces is bounded.
+
+a vertex is never moved, only deleted, so nothing shifts in time. the ends of a
+note are never touched, which keeps the onset and the closing w = 0. neither is
+a vertex next to a segment of zero width: those are instant pitch jumps inside a
+note, and smearing one into a ramp is clearly audible.
+]]
+function Edit.thin()
+	local runs = Edit.selectedRuns()
+	if not runs then
+		setMessage("select something to thin")
+		return
+	end
+
+	local tolY, tolW = Edit.thinTolY, Edit.thinTolW
+	local maxGap = Edit.resampleDist
+
+	local doomed = {}
+	local removed = 0
+	local worst = 0
+
+	for _, run in ipairs(runs) do
+		local a = run[1]
+		local i = 2
+		while i <= #run - 1 do
+			local m = run[i]
+			local b = run[i + 1]
+
+			local drop = false
+			-- an end of a note is an anchor, so is either side of a jump
+			if m.l and m.r and a.x < m.x and m.x < b.x and b.x - a.x <= maxGap then
+				local t = (m.x - a.x) / (b.x - a.x)
+				local ey = math.abs(m.y - (a.y + t * (b.y - a.y)))
+				local ew = math.abs(m.w - (a.w + t * (b.w - a.w)))
+				if ey <= tolY and ew <= tolW then
+					drop = true
+					worst = math.max(worst, ey)
+				end
+			end
+
+			if drop then
+				a.r = b
+				b.l = a
+				doomed[m] = true
+				removed = removed + 1
+				a = b
+				i = i + 2
+			else
+				a = m
+				i = i + 1
+			end
+		end
+	end
+
+	if removed == 0 then
+		setMessage("nothing left to thin (" .. #song.track[1] .. " vertices)")
+		return
+	end
+
+	local before = #song.track[1]
+	compact(doomed)
+	Selection.refresh()
+
+	setMessage(
+		string.format("thinned %d to %d vertices (max %.1fc)", before, #song.track[1], worst)
+	)
+	Undo.register()
+end
+
+--[[
+the exact inverse: a midpoint on every segment. the inserted vertex carries the
+value the synth was already interpolating there, so this cannot change the sound
+at all. it is how you get brush resolution back on a note you thinned.
+]]
+function Edit.densify()
+	local runs = Edit.selectedRuns()
+	if not runs then
+		setMessage("select something to densify")
+		return
+	end
+
+	local track = song.track[1]
+	local added = 0
+
+	for _, run in ipairs(runs) do
+		for i = 1, #run - 1 do
+			local a = run[i]
+			local b = run[i + 1]
+			-- only neighbours, and never a segment already too short to see
+			if a.r == b and b.x - a.x > Edit.minSplit then
+				local new = {
+					x = (a.x + b.x) * 0.5,
+					y = (a.y + b.y) * 0.5,
+					w = (a.w + b.w) * 0.5,
+					part = a.part,
+					l = a,
+					r = b,
+				}
+				a.r = new
+				b.l = new
+				track[#track + 1] = new
+				-- keep the selection contiguous so pressing again works
+				if Selection.mask[a] and Selection.mask[b] then
+					Selection.mask[new] = true
+				end
+				added = added + 1
+			end
+		end
+	end
+
+	if added == 0 then
+		setMessage("nothing left to densify")
+		return
+	end
+
+	Selection.refresh()
+	setMessage("densified to " .. #track .. " vertices (+" .. added .. ")")
+	Undo.register()
+end
+
 function Edit.resampleAll()
 	local list = {}
 	for i, v in ipairs(song.track[1]) do
@@ -404,7 +627,7 @@ function Edit.resampleAll()
 				if dx < 0 then
 					v.r = nil
 					nextv.l = nil
-				elseif dx > 80 then
+				elseif dx > Edit.resampleDist then
 					local nx = (v.x + v.r.x) * 0.5
 					local ny = (v.y + v.r.y) * 0.5
 					local nw = (v.w + v.r.w) * 0.5

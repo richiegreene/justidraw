@@ -53,6 +53,33 @@ macOS and Linux work but only mouse input.
 * Delete / backspace: delete selection. With nothing selected, opens a new project.
 * J: Join ends of selected notes
 * shift+n: toggle between selecting notes or vertices
+### Vertex density
+A note is a chain of vertices, and the synth draws a straight line between each
+pair of them, in pitch and in volume alike. So a vertex that already sits on the
+line between its two neighbours carries no information: dropping it does not
+change a single sample. Recorded, imported and heavily edited songs collect a
+great many of those, and every one of them costs drawing time, undo memory and
+responsiveness.
+* V: thin the selection. Each press removes up to half of the vertices, and only
+ever removes one when the straight line replacing it stays within 3 cents and
+0.03 pressure of it, so what you hear stays put. Press it again to go further;
+it stops when there is nothing safe left to remove. The message line reports the
+count before and after, and the largest pitch error introduced.
+* shift+V: densify the selection, by putting a vertex in the middle of every
+segment. It carries the value the synth was interpolating there anyway, so this
+one cannot change the sound at all. Use it to get brush resolution back on a
+note you thinned too far.
+* ctrl+V: cycle the maximum segment length (80, 200, 400, 800 pixels, where 100
+is one beat). This is how far apart vertices are allowed to get, so it sets how
+far `V` can thin. It is also the spacing notes are resampled to while you edit
+them, so raising it and thinning leaves a song that stays thin; lowering it
+again fills the notes back in the next time you draw on them.
+
+Both commands work on whatever is selected: a lasso, a rectangle, whole notes
+(`shift+N`), or every note in a part (`shift+ctrl+alt+N`). With nothing selected
+they act on the note under the cursor. Vertices are only ever added or removed,
+never moved, and the first and last vertex of a note are always left alone, so
+nothing shifts in time and no note changes length.
 ### Parts
 Notes can be tagged with one of nine parts so that separate voices are easy to
 tell apart. Each part draws in its own color, with a matching highlight color
