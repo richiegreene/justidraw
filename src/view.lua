@@ -80,17 +80,47 @@ function View.draw()
 	local grid_g = Theme.current.grid[2]
 	local grid_b = Theme.current.grid[3]
 
+	local bg_r = Theme.current.background[1]
+	local bg_g = Theme.current.background[2]
+	local bg_b = Theme.current.background[3]
+
 	local showHarmonics = love.keyboard.isDown("y") and not textInput
 
 	if showHarmonics then
 		drawHarmonics(ix, iy, ex, ey, sx, sy)
 	else
 		if Theme.current.showGridPitch then
-			-- draw 12edo grid
+			local isBlackKey = { [1] = true, [3] = true, [6] = true, [8] = true, [10] = true }
+			local bgLum = 0.3 * bg_r + 0.6 * bg_g + 0.1 * bg_b
+			local lineAlpha = math.min(1.0, math.max(0.4, sy * 1.5))
+
+			-- 1. Draw horizontal piano roll background bands for black key pitches (C#, D#, F#, G#, A#)
+			for i = math.floor(iy / 100) - 1, math.floor(ey / 100) + 1 do
+				local k = ((-i) % 12 + 12) % 12
+				if isBlackKey[k] then
+					if bgLum < 0.5 then
+						-- Dark theme: inverted / brighter chromatic bands
+						love.graphics.setColor(1.0, 1.0, 1.0, 0.12)
+					else
+						-- Light theme: darker chromatic bands
+						love.graphics.setColor(0.0, 0.0, 0.0, 0.10)
+					end
+					love.graphics.rectangle("fill", sx * ix, sy * (i - 0.5) * 100, sx * (ex - ix), sy * 100)
+				end
+			end
+
+			-- 2. Draw 12EDO pitch grid lines (bold lines on C octaves)
 			for i = math.floor(iy / 100) + 1, math.floor(ey / 100) do
-				love.graphics.setColor(grid_r, grid_g, grid_b, 0.25 * sy)
+				local k = ((-i) % 12 + 12) % 12
 				if i % 12 == 0 then
-					love.graphics.setColor(grid_r, grid_g, grid_b, 3 * sy)
+					-- C octave divider line (prominent)
+					love.graphics.setColor(grid_r, grid_g, grid_b, 0.75 * lineAlpha)
+				elseif k == 5 then
+					-- F divider line (mid-octave)
+					love.graphics.setColor(grid_r, grid_g, grid_b, 0.35 * lineAlpha)
+				else
+					-- Standard chromatic semitone line
+					love.graphics.setColor(grid_r, grid_g, grid_b, 0.18 * lineAlpha)
 				end
 				love.graphics.line(sx * ix, sy * i * 100, sx * ex, sy * i * 100)
 			end
@@ -117,9 +147,7 @@ function View.draw()
 	local envelope = Theme.current.envelope
 	local parts = Theme.current.parts
 
-	local bg_r = Theme.current.background[1]
-	local bg_g = Theme.current.background[2]
-	local bg_b = Theme.current.background[3]
+
 
 	local muted = Edit.mutedParts
 	local muteFade = Theme.current.muteFade

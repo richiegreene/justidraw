@@ -6,7 +6,8 @@ local M = {}
 M.peak = 0.0
 M.cpuLoad = 0.0
 
-local fr_to_delta = 440 / 44100
+local BASE_FREQ = 261.625565
+local fr_to_delta = BASE_FREQ / 44100
 
 local sin = math.sin
 local sqrt = math.sqrt
@@ -195,7 +196,7 @@ function M.resetVoices()
 		M.voice[i].amp = 0
 		M.voice[i].target_amp = 0
 		M.voice[i].accum = 0
-		M.voice[i].delta = 440 / 44100
+		M.voice[i].delta = BASE_FREQ / 44100
 		M.voice[i].pout = 0
 		M.voice[i].active = false
 		M.voice[i].preview = false
@@ -235,7 +236,7 @@ function M.update()
 		if currentTool.drawTool then
 			M.voice[M.voiceLimit].target_amp = pres
 			M.voice[M.voiceLimit].preview = true
-			local fr = 440 * 2 ^ (-y / 1200)
+			local fr = BASE_FREQ * 2 ^ (-y / 1200)
 			M.voice[M.voiceLimit].delta = fr / 44100
 		end
 
@@ -246,7 +247,7 @@ function M.update()
 				local a = (x - v.x) / (v.r.x - v.x)
 
 				local yy = (1 - a) * v.y + a * v.r.y
-				local fr = 440 * 2 ^ (-yy / 1200)
+				local fr = BASE_FREQ * 2 ^ (-yy / 1200)
 				M.voice[j].delta = fr / 44100
 				M.voice[j].target_amp = (1 - a) * v.w + a * v.r.w
 				M.voice[j].preview = true
