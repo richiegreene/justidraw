@@ -19,6 +19,7 @@ function File.loadLast()
 		local name = love.filesystem.read("last_save")
 		if love.filesystem.getInfo(name) then
 			File.read(love.filesystem.read(name))
+			File.loadTempoMap(name)
 			setMessage("loaded last save: " .. name)
 			return
 		end
@@ -26,6 +27,25 @@ function File.loadLast()
 		love.filesystem.write("last_save", "a")
 	end
 	setMessage("no last save found")
+end
+
+--[[
+look for the barlines engrave left beside a save.
+
+this is the whole of the seam on this side. engrave writes the sidecar into the
+save folder before it launches us, so by the time we open the .sav the map is
+already sitting next to it under the same name -- see tempomap.lua. an absent
+one is the ordinary case: it means this drawing has not been engraved yet, and
+the plain grid is the right thing to draw.
+]]
+function File.loadTempoMap(name)
+	if not TempoMap then
+		return
+	end
+	if TempoMap.loadFor(name) then
+		TempoMap.show = true
+		setMessage(TempoMap.describe() .. " (ctrl+g for the plain grid)")
+	end
 end
 
 function File.randomName()
@@ -63,6 +83,7 @@ function File.load(f)
 	File.read(data)
 
 	song.name = name
+	File.loadTempoMap(name)
 	File.setTitle()
 end
 

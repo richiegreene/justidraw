@@ -38,6 +38,7 @@ shortcuts
  ctrl+O: open save folder
  ctrl+R: render wav
  ctrl+T: cycle between themes
+ ctrl+G: engrave's barlines / the plain grid
  ctrl+B: cycle between synths
  shift+R: reverb off/on
  Escape: quit

@@ -3,6 +3,7 @@ require("edit")
 View = require("view")
 Audio = require("audio")
 Theme = require("theme")
+TempoMap = require("tempomap")
 require("file")
 require("undo")
 require("selection")
@@ -519,6 +520,17 @@ function love.keypressed(key, scancode, isrepeat)
 			selectTool(Pan)
 		elseif key == "p" then
 			selectTool(Line)
+		elseif key == "g" and (modifierKeys.ctrl or modifierKeys.cmd) then
+			-- swap between engrave's barlines and this program's own grid.
+			-- only offered when there is a map: a toggle that silently does
+			-- nothing is worse than no toggle, so it says which case it is in
+			if not TempoMap.active then
+				setMessage("no tempo map -- engrave writes one beside the save")
+			elseif TempoMap.toggle() then
+				setMessage(TempoMap.describe())
+			else
+				setMessage("plain grid")
+			end
 		elseif key == "g" then
 			selectTool(Grab)
 		elseif key == "m" then

@@ -68,6 +68,67 @@ local function drawHarmonics(ix, iy, ex, ey, sx, sy)
 	end
 end
 
+--[[
+the barlines engrave read off this drawing, drawn instead of the fixed grid.
+
+the hierarchy is the same one the plain grid has, so that switching between them
+does not feel like switching applications: a bold line where the bar is, a
+medium one on the beat, a faint one under a subdivision. what has changed is that
+the lines are where the music turns rather than every hundred units.
+
+an anchor the composer tagged by hand is drawn in the theme's highlight colour
+and a little heavier. that distinction is the whole reason the roles are sent
+across at all -- a beat engrave worked out by interpolating and a beat somebody
+put there on purpose are different claims, and the second one is the one you
+would want to check against the drawing.
+]]
+local function drawTempoMap(ix, iy, ex, ey, sx, sy)
+	local grid = Theme.current.grid
+	local hi = Theme.current.highlight
+	local text = Theme.current.text
+
+	local y0 = sy * iy
+	local y1 = sy * ey
+
+	-- the beats and subdivisions first, so a barline is never drawn under one
+	for _, a in ipairs(TempoMap.anchors) do
+		if a.x >= ix - 100 and a.x <= ex + 100 and a.role ~= "downbeat" then
+			local c = a.tagged and hi or grid
+			local alpha = 0.25
+			if a.role == "beat" then
+				alpha = 0.5
+			elseif a.role == "hold" then
+				alpha = 0.6
+			elseif a.role == "exclude" then
+				alpha = 0.12
+			end
+			if a.tagged then
+				alpha = math.min(1, alpha + 0.25)
+			end
+			-- floored, unlike the plain grid, which fades to nothing as you
+			-- zoom out. the plain grid can afford that: it is regular, so one
+			-- line looks like the next and losing them costs no information.
+			-- these are where the music actually turns, and the whole reason to
+			-- zoom out is to see that shape across the piece
+			love.graphics.setColor(c[1], c[2], c[3], math.min(1, math.max(alpha * 0.4, alpha * sx * 2)))
+			love.graphics.line(sx * a.x, y0, sx * a.x, y1)
+		end
+	end
+
+	-- then the bars, over the top, with their numbers
+	for _, b in ipairs(TempoMap.bars) do
+		if b.x >= ix - 100 and b.x <= ex + 100 then
+			love.graphics.setColor(grid[1], grid[2], grid[3], math.min(1, math.max(0.5, 4 * sx)))
+			love.graphics.line(sx * b.x, y0, sx * b.x, y1)
+
+			-- the bar number, held at the top of the view rather than at the top
+			-- of the piece, so it is readable wherever the composer has scrolled
+			love.graphics.setColor(text[1], text[2], text[3], 0.75)
+			love.graphics.print(b.number, sx * b.x + 3, y0 + 3)
+		end
+	end
+end
+
 function View.draw()
 	love.graphics.push()
 	love.graphics.translate(View.x, View.y)
@@ -128,16 +189,20 @@ function View.draw()
 	end
 
 	if Theme.current.showGridTime then
-		-- draw bpm grid
-		for i = math.floor(ix / 100) + 1, math.floor(ex / 100) do
-			love.graphics.setColor(grid_r, grid_g, grid_b, 0.25 * sx)
-			if (i - song.bpmOffset) % 4 == 0 then
-				love.graphics.setColor(grid_r, grid_g, grid_b, 1 * sx)
+		if TempoMap and TempoMap.active and TempoMap.show then
+			drawTempoMap(ix, iy, ex, ey, sx, sy)
+		else
+			-- draw bpm grid
+			for i = math.floor(ix / 100) + 1, math.floor(ex / 100) do
+				love.graphics.setColor(grid_r, grid_g, grid_b, 0.25 * sx)
+				if (i - song.bpmOffset) % 4 == 0 then
+					love.graphics.setColor(grid_r, grid_g, grid_b, 1 * sx)
+				end
+				if (i - song.bpmOffset) % 16 == 0 then
+					love.graphics.setColor(grid_r, grid_g, grid_b, 4 * sx)
+				end
+				love.graphics.line(sx * i * 100, sy * iy, sx * i * 100, sy * ey)
 			end
-			if (i - song.bpmOffset) % 16 == 0 then
-				love.graphics.setColor(grid_r, grid_g, grid_b, 4 * sx)
-			end
-			love.graphics.line(sx * i * 100, sy * iy, sx * i * 100, sy * ey)
 		end
 	end
 

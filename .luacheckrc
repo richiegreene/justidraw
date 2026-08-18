@@ -43,6 +43,7 @@ stds.justidaw = {
       "Tablet",
       "Undo",
       "Theme",
+      "TempoMap",
    },
    read_globals = { "VERSION_MAJOR", "VERSION_MINOR" },
 }
