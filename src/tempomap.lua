@@ -186,12 +186,17 @@ function TempoMap.toggle()
 	return TempoMap.show
 end
 
--- a line for the status area
+-- a line for the status area. it names where the map came from because there
+-- is more than one answer now: engrave reads barlines off a drawing that was
+-- already made, connect-the-dots carries them over from the midi file a drawing
+-- was made out of. same file, opposite directions, and worth telling apart when
+-- the bars are not where you expected them
 function TempoMap.describe()
 	if not TempoMap.active then
 		return "no tempo map"
 	end
-	return #TempoMap.bars .. " bars from engrave"
+	local from = TempoMap.source or "elsewhere"
+	return #TempoMap.bars .. " bars from " .. from
 end
 
 return TempoMap
