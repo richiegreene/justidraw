@@ -249,8 +249,8 @@ function Snap.snappingLogic()
             local effective_target_vys = {}
 
             if Snap.octaveRepeating then
-                -- Original logic: generate candidates across octaves based on the current_vy's octave
-                local current_octave_base_vy_for_c = math.floor(current_vy / CENTS_PER_OCTAVE) * CENTS_PER_OCTAVE
+                -- Generate candidates across octaves relative to C4 (y = 900)
+                local current_octave_base_vy_for_c = math.floor((current_vy - 900) / CENTS_PER_OCTAVE) * CENTS_PER_OCTAVE + 900
                 local oct_offsets_to_check = {0, -CENTS_PER_OCTAVE, CENTS_PER_OCTAVE}
 
                 for _, oct_offset in ipairs(oct_offsets_to_check) do
@@ -269,14 +269,10 @@ function Snap.snappingLogic()
                     end
                 end
             else
-                -- When octaveRepeating is OFF, the target intervals are absolute offsets from C4 (v.y = 0).
-                -- The selected item's v.y should snap to the nearest of these absolute targets.
-
-                -- The effective_target_vys list is simply the inversion of Snap.targetCentIntervals,
-                -- as lower v.y is higher pitch, and C4 is v.y = 0.
+                -- When octaveRepeating is OFF, target intervals are absolute offsets from C4 (v.y = 900).
                 effective_target_vys = {}
                 for _, interval_cents in ipairs(Snap.targetCentIntervals) do
-                    table.insert(effective_target_vys, -interval_cents)
+                    table.insert(effective_target_vys, 900 - interval_cents)
                 end
 
                 -- Now, find the nearest candidate to the current_vy from this list of absolute targets.

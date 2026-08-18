@@ -96,7 +96,7 @@ function View.draw()
 
 			-- 1. Draw horizontal piano roll background bands for black key pitches (C#, D#, F#, G#, A#)
 			for i = math.floor(iy / 100) - 1, math.floor(ey / 100) + 1 do
-				local k = ((-i) % 12 + 12) % 12
+				local k = ((9 - i) % 12 + 12) % 12
 				if isBlackKey[k] then
 					if bgLum < 0.5 then
 						-- Dark theme: inverted / brighter chromatic bands
@@ -111,8 +111,8 @@ function View.draw()
 
 			-- 2. Draw 12EDO pitch grid lines (bold lines on C octaves)
 			for i = math.floor(iy / 100) + 1, math.floor(ey / 100) do
-				local k = ((-i) % 12 + 12) % 12
-				if i % 12 == 0 then
+				local k = ((9 - i) % 12 + 12) % 12
+				if k == 0 then
 					-- C octave divider line (prominent)
 					love.graphics.setColor(grid_r, grid_g, grid_b, 0.75 * lineAlpha)
 				elseif k == 5 then

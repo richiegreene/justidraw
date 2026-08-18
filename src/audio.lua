@@ -6,7 +6,7 @@ local M = {}
 M.peak = 0.0
 M.cpuLoad = 0.0
 
-local BASE_FREQ = 261.625565
+local BASE_FREQ = 440
 local fr_to_delta = BASE_FREQ / 44100
 
 local sin = math.sin
