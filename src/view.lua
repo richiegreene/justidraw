@@ -90,41 +90,76 @@ local function drawTempoMap(ix, iy, ex, ey, sx, sy)
 	local y0 = sy * iy
 	local y1 = sy * ey
 
-	-- the beats and subdivisions first, so a barline is never drawn under one
+	-- the beats and subdivisions first, so a barline is never drawn under one.
+	--
+	-- a tagged anchor is a claim the composer made on purpose and is kept
+	-- however far out the view goes. an untagged one is the engraver's own
+	-- reading, and readings finer than the beat are only useful once you are
+	-- close enough to need them: at a distance they are just noise between the
+	-- beats and bars, the same way a ruler marked in millimetres reads as
+	-- solid black from across the room.
+	--
+	-- what "too close together" means depends on the piece -- a fast passage
+	-- packs more beats per pixel than a slow one at the same zoom -- so this
+	-- is decided on screen distance, not on a fixed zoom level: each tier
+	-- keeps its own last-drawn position and skips a line that would land
+	-- closer to it than MIN_GAP pixels. subdivisions drop out first, using
+	-- the widest gap, then beats, leaving bars (below) to carry the shape of
+	-- the piece when zoomed far out.
+	local MIN_GAP = 6
+	local lastFineSX = -math.huge
+	local lastBeatSX = -math.huge
 	for _, a in ipairs(TempoMap.anchors) do
 		if a.x >= ix - 100 and a.x <= ex + 100 and a.role ~= "downbeat" then
+			local ax = sx * a.x
 			local c = a.tagged and hi or grid
 			local alpha = 0.25
+			local tierGap = MIN_GAP * 3 -- subdivision / exclude / other fine-grained roles
+			local lastSX = lastFineSX
 			if a.role == "beat" then
 				alpha = 0.5
+				tierGap = MIN_GAP
+				lastSX = lastBeatSX
 			elseif a.role == "hold" then
 				alpha = 0.6
+				tierGap = MIN_GAP
+				lastSX = lastBeatSX
 			elseif a.role == "exclude" then
 				alpha = 0.12
 			end
 			if a.tagged then
 				alpha = math.min(1, alpha + 0.25)
+				tierGap = 0
 			end
-			-- floored, unlike the plain grid, which fades to nothing as you
-			-- zoom out. the plain grid can afford that: it is regular, so one
-			-- line looks like the next and losing them costs no information.
-			-- these are where the music actually turns, and the whole reason to
-			-- zoom out is to see that shape across the piece
-			love.graphics.setColor(c[1], c[2], c[3], math.min(1, math.max(alpha * 0.4, alpha * sx * 2)))
-			love.graphics.line(sx * a.x, y0, sx * a.x, y1)
+			if ax - lastSX >= tierGap then
+				love.graphics.setColor(c[1], c[2], c[3], alpha)
+				love.graphics.line(ax, y0, ax, y1)
+				if a.role == "beat" or a.role == "hold" then
+					lastBeatSX = ax
+				else
+					lastFineSX = ax
+				end
+			end
 		end
 	end
 
-	-- then the bars, over the top, with their numbers
+	-- then the bars, over the top, with their numbers. thinned the same way,
+	-- so a piece with many short bars does not leave the grid looking just as
+	-- dense as it was before the beats and subdivisions dropped out
+	local lastBarSX = -math.huge
 	for _, b in ipairs(TempoMap.bars) do
 		if b.x >= ix - 100 and b.x <= ex + 100 then
-			love.graphics.setColor(grid[1], grid[2], grid[3], math.min(1, math.max(0.5, 4 * sx)))
-			love.graphics.line(sx * b.x, y0, sx * b.x, y1)
+			local bx = sx * b.x
+			if bx - lastBarSX >= MIN_GAP * 2 then
+				lastBarSX = bx
+				love.graphics.setColor(grid[1], grid[2], grid[3], 0.85)
+				love.graphics.line(bx, y0, bx, y1)
 
-			-- the bar number, held at the top of the view rather than at the top
-			-- of the piece, so it is readable wherever the composer has scrolled
-			love.graphics.setColor(text[1], text[2], text[3], 0.75)
-			love.graphics.print(b.number, sx * b.x + 3, y0 + 3)
+				-- the bar number, held at the top of the view rather than at the top
+				-- of the piece, so it is readable wherever the composer has scrolled
+				love.graphics.setColor(text[1], text[2], text[3], 0.75)
+				love.graphics.print(b.number, bx + 3, y0 + 3)
+			end
 		end
 	end
 end
