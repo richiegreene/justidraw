@@ -2,26 +2,46 @@ Undo = {}
 
 Undo.maxSize = 50
 
--- deepcopy with recursive tables.
+-- Copy the graph iteratively so long linked notes cannot exhaust the Lua stack.
 function deepcopy(orig, copies)
-	copies = copies or {}
-	local orig_type = type(orig)
-	local copy
-	if orig_type == "table" then
-		if copies[orig] then
-			copy = copies[orig]
-		else
-			copy = {}
-			copies[orig] = copy
-			for orig_key, orig_value in next, orig, nil do
-				copy[deepcopy(orig_key, copies)] = deepcopy(orig_value, copies)
-			end
-			setmetatable(copy, deepcopy(getmetatable(orig), copies))
-		end
-	else -- number, string, boolean, etc
-		copy = orig
+	if type(orig) ~= "table" then
+		return orig
 	end
-	return copy
+
+	copies = copies or {}
+	if copies[orig] then
+		return copies[orig]
+	end
+
+	local root = {}
+	copies[orig] = root
+	local pending = { { source = orig, target = root } }
+
+	local function copyValue(value)
+		if type(value) ~= "table" then
+			return value
+		end
+		if copies[value] then
+			return copies[value]
+		end
+		local copy = {}
+		copies[value] = copy
+		pending[#pending + 1] = { source = value, target = copy }
+		return copy
+	end
+
+	while #pending > 0 do
+		local frame = table.remove(pending)
+		local metatable = getmetatable(frame.source)
+		if metatable then
+			setmetatable(frame.target, copyValue(metatable))
+		end
+		for key, value in next, frame.source, nil do
+			frame.target[copyValue(key)] = copyValue(value)
+		end
+	end
+
+	return root
 end
 
 function Undo.load()
