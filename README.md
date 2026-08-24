@@ -81,18 +81,19 @@ they act on the note under the cursor. Vertices are only ever added or removed,
 never moved, and the first and last vertex of a note are always left alone, so
 nothing shifts in time and no note changes length.
 ### Parts
-Notes can be tagged with one of nine parts so that separate voices are easy to
+Notes can be tagged with one of 32 parts so that separate voices are easy to
 tell apart. Each part draws in its own color, with a matching highlight color
 when selected. Untagged notes keep the normal theme colors.
-* ctrl+alt+1 .. 9: assign the selection to a part (cmd+option on macOS).
+* ctrl+alt+1 .. 32: assign the selection to a part (cmd+option on macOS). Type
+the two digits quickly for parts 10 through 32.
 Pressing the same combination again clears it back to the default color.
 With nothing selected, the note under the cursor is used.
 * ctrl+alt+0: clear the part of the selection
-* shift+ctrl+alt+1 .. 9: select every note in that part, anywhere in the project
+* shift+ctrl+alt+1 .. 32: select every note in that part, anywhere in the project
 * shift+ctrl+alt+0: select every note that has not been assigned to a part
-* alt+1 .. 9: mute a part. Muted notes are greyed out and stop sounding, both
-during playback and in a rendered wav. Muting takes effect straight away, even
-while the song is playing.
+* alt+1 .. 32: mute a part. Type the two digits quickly for parts 10 through 32.
+Muted notes are greyed out and stop sounding, both during playback and in a
+rendered wav. Muting takes effect straight away, even while the song is playing.
 * alt+0: mute the notes that have not been assigned to a part
 
 A muted part is also locked. It cannot be selected, erased, grabbed, moved,

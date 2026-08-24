@@ -3,7 +3,7 @@ local Theme = {}
 Theme.default = require("theme_default")
 
 -- number of assignable note parts, see Edit.assignPart
-Theme.PART_COUNT = 9
+Theme.PART_COUNT = 32
 
 local function fromHex(rgba)
 	local rb = tonumber(string.sub(rgba, 2, 3), 16)

@@ -91,7 +91,7 @@ function setMessage(m)
 	table.insert(messageList, { m, MESSAGE_TIME })
 end
 
--- 1 to 4 pick a part, 0 stands for the notes without one
+-- 1 to Theme.PART_COUNT pick a part, 0 stands for the notes without one
 local function isPartKey(key)
 	local n = tonumber(key)
 	return n ~= nil and #key == 1 and n >= 0 and n <= Theme.PART_COUNT
@@ -103,6 +103,76 @@ local function partNumber(key)
 		return nil
 	end
 	return n
+end
+
+local PART_KEY_TIMEOUT = 0.35
+local pendingPartKey = nil
+
+local function runPartShortcut(part, mode)
+	if mode == "select" then
+		Edit.selectPart(part)
+	elseif mode == "assign" then
+		Edit.assignPart(part)
+	else
+		Edit.toggleMute(part)
+	end
+end
+
+local function flushPartKey()
+	if pendingPartKey then
+		local pending = pendingPartKey
+		pendingPartKey = nil
+		runPartShortcut(partNumber(pending.digit), pending.mode)
+	end
+end
+
+local function partShortcutMode()
+	if not modifierKeys.alt then
+		return nil
+	elseif modifierKeys.ctrl or modifierKeys.cmd then
+		if modifierKeys.shift then
+			return "select"
+		end
+		return "assign"
+	end
+	return "mute"
+end
+
+local function handlePartKey(key, isrepeat)
+	if isrepeat or not isPartKey(key) then
+		return false
+	end
+
+	local mode = partShortcutMode()
+	if not mode then
+		return false
+	end
+
+	local digit = tonumber(key)
+	if pendingPartKey then
+		local pending = pendingPartKey
+		pendingPartKey = nil
+		local combined = pending.digit * 10 + digit
+		if combined >= 10 and combined <= Theme.PART_COUNT then
+			runPartShortcut(combined, pending.mode)
+		else
+			runPartShortcut(partNumber(pending.digit), pending.mode)
+			if digit >= 1 and digit <= 3 then
+				pendingPartKey = { digit = digit, mode = mode, time = PART_KEY_TIMEOUT }
+			else
+				runPartShortcut(partNumber(digit), mode)
+			end
+		end
+		return true
+	end
+
+	-- Delay 1-3 briefly so a following digit can form a two-digit part.
+	if digit >= 1 and digit <= 3 and Theme.PART_COUNT >= 10 then
+		pendingPartKey = { digit = digit, mode = mode, time = PART_KEY_TIMEOUT }
+	else
+		runPartShortcut(partNumber(digit), mode)
+	end
+	return true
 end
 
 function love.load()
@@ -243,6 +313,13 @@ end
 function love.update(dt)
 	mousePX, mousePY = mouseX, mouseY
 	Tablet.update()
+
+	if pendingPartKey then
+		pendingPartKey.time = pendingPartKey.time - dt
+		if pendingPartKey.time <= 0 then
+			flushPartKey()
+		end
+	end
 
 	--prevent extreme spikes
 	local max_dt = 1.0 / 30.0
@@ -407,6 +484,12 @@ function love.keypressed(key, scancode, isrepeat)
             Snap.toggleOctaveRepeating()
         end
 	else
+		if pendingPartKey and not isPartKey(key) then
+			flushPartKey()
+		end
+		if handlePartKey(key, isrepeat) then
+			return
+		end
 		setTool()
 
 		if key == "space" then
@@ -599,29 +682,6 @@ function love.keypressed(key, scancode, isrepeat)
 			Edit.densify()
 		elseif key == "v" and not isrepeat then
 			Edit.thin()
-		elseif
-			--[[
-			the part shortcuts all toggle something, so they only ever act on a
-			real key press. holding one down must not repeat: macOS suppresses
-			key repeat while cmd is held and starts it the moment cmd is let
-			go, which would turn the tail of ctrl/cmd+alt+N into a bare alt+N
-			and silently mute the part that was just assigned.
-			]]
-			isPartKey(key) and modifierKeys.alt and (modifierKeys.ctrl or modifierKeys.cmd) and not isrepeat
-		then
-			local part = partNumber(key)
-			if modifierKeys.shift then
-				-- select every note in the part
-				Edit.selectPart(part)
-			else
-				-- assign the selected notes (or the note under the cursor) to a part
-				Edit.assignPart(part)
-			end
-		elseif
-			-- alt on its own mutes a part
-			isPartKey(key) and modifierKeys.alt and not (modifierKeys.ctrl or modifierKeys.cmd) and not isrepeat
-		then
-			Edit.toggleMute(partNumber(key))
 		elseif key == "d" and modifierKeys.shift then
 			Clipboard.duplicate()
 		elseif key == "d" then

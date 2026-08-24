@@ -15,7 +15,7 @@ theme.dark = {
 	vertices = { 0.8, 0.8, 0.8 },
 	showVertices = true,
 
-	-- up to nine assignable parts, set with ctrl/cmd+alt+1 .. 9
+	-- 32 assignable parts, set with ctrl/cmd+alt+1 .. 32
 	-- `color` replaces `envelope`, `highlight` replaces `highlight` for that note
 	-- `highlight` is optional, a lighter tint of `color` is used when it is missing
 	-- a theme without `parts` borrows the dark or light palette below,

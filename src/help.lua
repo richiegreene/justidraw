@@ -25,9 +25,9 @@ shortcuts
  V: thin selection (fewer vertices, same sound)
  shift+V: densify selection (silent, undoes thinning)
  ctrl+V: max segment length (thin further)
- ctrl+alt(⌥)+1-9: assign part color (0: clear)
- shift+ctrl+alt(⌥)+1-9: select part (0: unassigned)
- alt(⌥)+1-9: mute + lock part (0: unassigned)
+ ctrl+alt(⌥)+1-32: assign part color (0: clear; type two digits quickly)
+ shift+ctrl+alt(⌥)+1-32: select part (0: unassigned; type two digits quickly)
+ alt(⌥)+1-32: mute + lock part (0: unassigned; type two digits quickly)
  Y: Show harmonic series
  [ and ]: change brush radius
  + and -: change tempo
