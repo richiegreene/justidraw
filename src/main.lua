@@ -79,6 +79,7 @@ local helpFont = love.graphics.newFont(12)
 minLength = 50
 automergeDist = 50
 selectNotes = false
+blackAndWhite = false
 
 local messageList = {}
 local MESSAGE_TIME = 3.0
@@ -505,6 +506,13 @@ function love.keypressed(key, scancode, isrepeat)
 			Audio.render()
 		elseif key == "t" and (modifierKeys.ctrl or modifierKeys.cmd) then
 			Theme.next()
+		elseif key == "b" and modifierKeys.shift and (modifierKeys.ctrl or modifierKeys.cmd) then
+			blackAndWhite = not blackAndWhite
+			if blackAndWhite then
+				setMessage("part colors off")
+			else
+				setMessage("part colors on")
+			end
 		elseif key == "b" and (modifierKeys.ctrl or modifierKeys.cmd) then
 			Audio.nextSynth()
 		elseif key == "v" and (modifierKeys.ctrl or modifierKeys.cmd) then

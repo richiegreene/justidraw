@@ -40,6 +40,7 @@ shortcuts
  ctrl+T: cycle between themes
  ctrl+G: engrave's barlines / the plain grid
  ctrl+B: cycle between synths
+ shift+ctrl/cmd+B: show/hide part colors
  shift+R: reverb off/on
  Escape: quit
 ]]

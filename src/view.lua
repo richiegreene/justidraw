@@ -269,7 +269,7 @@ function View.draw()
 		if v.r then
 			-- notes assigned to a part are drawn in that part's color
 			local c = envelope
-			if v.part and parts[v.part] then
+			if not blackAndWhite and v.part and parts[v.part] then
 				c = parts[v.part].color
 			end
 			local b = (v.w + v.r.w) * 0.4 + 0.2
@@ -301,7 +301,7 @@ function View.draw()
 
 	for i, v in ipairs(song.track[1]) do
 		-- a part brings its own pair of colors along
-		local p = v.part and parts[v.part]
+		local p = not blackAndWhite and v.part and parts[v.part]
 		local highlightColor = p and p.highlight or Theme.current.highlight
 		local vertexColor = p and p.color or Theme.current.vertices
 		local isMuted = muted[v.part or 0]
