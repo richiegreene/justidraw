@@ -28,6 +28,10 @@ local Stretch = require("tool_stretch")
 local Smudge = require("tool_smudge")
 local Comment = require("tool_comment")
 local Snap = require("tool_snap")
+-- not a tool: a command over the selection, like join and thin, and it keeps its
+-- own file because what it has to know about is the tempo map rather than the
+-- pointer. see tool_divide.lua
+Divide = require("tool_divide")
 
 --print console directly
 io.stdout:setvbuf("no")
@@ -485,7 +489,32 @@ function love.draw()
 	end
 end
 
+--[[
+what is actually held down, rather than what we saw being pressed.
+
+the four flags below are kept by watching for the modifier's own keypress, and
+that works right up until the press never arrives. cmd-tabbing into the window
+with command already down is the ordinary way it does not: the key goes down
+while another application has the keyboard, this one is handed the focus with it
+already held, and no keypressed is ever delivered for it. the flag stays false
+for as long as the key stays physically down, so every shortcut under it quietly
+runs its unmodified branch -- cmd+d deselecting instead of dividing, which is
+what it looks like from the outside.
+
+the keyboard itself has no such gap, so it is asked. the explicit assignments are
+left where they are and still run after this: for the modifier's own press and
+release they are the more direct answer, and this only fills in what was missed.
+]]
+local function syncModifiers()
+	local down = love.keyboard.isDown
+	modifierKeys.shift = down("lshift", "rshift")
+	modifierKeys.ctrl = down("lctrl", "rctrl")
+	modifierKeys.alt = down("lalt", "ralt")
+	modifierKeys.cmd = down("lgui", "rgui")
+end
+
 function love.keypressed(key, scancode, isrepeat)
+	syncModifiers()
 	if key == "lshift" or key == "rshift" then
 		modifierKeys.shift = true
 	elseif key == "lctrl" or key == "rctrl" then
@@ -512,6 +541,20 @@ function love.keypressed(key, scancode, isrepeat)
 				partMetadata[part] = { category = category, name = name }
 				File.savePartMetadata(song.name .. ".sav")
 				setMessage("part " .. part .. ": " .. name)
+			elseif textEditTarget == Divide then
+				-- the field is a count, not a name: it is read and acted on
+				-- rather than stored, and a misreading is reported by Divide.
+				--
+				-- guarded, because everything below this line is what closes the
+				-- field again. a command that threw on its way through would
+				-- leave textInput true for good, and with it true every keypress
+				-- goes into a text box the composer cannot see and no tool key
+				-- works -- the program would look like it had lost the keyboard
+				-- rather than like one command had failed
+				local ok, err = pcall(Divide.commit, textEntered)
+				if not ok then
+					setMessage("divide failed: " .. tostring(err))
+				end
 			elseif textEditTarget then
 				textEditTarget.text = textEntered
 				if textEditTarget == Snap then
@@ -758,6 +801,11 @@ function love.keypressed(key, scancode, isrepeat)
 			Edit.densify()
 		elseif key == "v" and not isrepeat then
 			Edit.thin()
+		elseif key == "d" and (modifierKeys.ctrl or modifierKeys.cmd) then
+			-- articulate the highlighted stretch as a number of notes. the count
+			-- is asked for rather than bound to keys because it is a musical
+			-- quantity and can be anything -- 4, 5, 7, or 5:4
+			Divide.startEditing()
 		elseif key == "d" and modifierKeys.shift then
 			Clipboard.duplicate()
 		elseif key == "d" then
@@ -899,12 +947,17 @@ function love.keypressed(key, scancode, isrepeat)
 end
 
 function love.textinput(t)
-	if textInput then
+	-- a shortcut is not typing. ctrl/cmd+d opens the divide field, and on the
+	-- platforms that also deliver the d as text it would arrive in the field it
+	-- had just opened -- so the field would start out holding "4d" and the count
+	-- would be rejected for a reason nothing on screen explains
+	if textInput and not (modifierKeys.ctrl or modifierKeys.cmd) then
 		textEntered = textEntered .. t
 	end
 end
 
 function love.keyreleased(key)
+	syncModifiers()
 	if key == "lshift" or key == "rshift" then
 		modifierKeys.shift = false
 	elseif key == "lctrl" or key == "rctrl" then
