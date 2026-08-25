@@ -79,7 +79,7 @@ function Loudness.apply(db0, db1)
 	return touched, clipped, peakBefore
 end
 
--- cmd/ctrl+l: ask for the figure, then apply it
+-- cmd/ctrl+i: ask for the figure, then apply it
 function Loudness.startEditing()
 	if Selection.isEmpty() then
 		setMessage("highlight something to change the loudness of")
@@ -88,7 +88,7 @@ function Loudness.startEditing()
 	textEntered = Loudness.text
 	textInput = true
 	textEditTarget = Loudness
-	textInputLabel = "loudness (+6dB, or 5-15dB):"
+	textInputLabel = "intensity (+6dB, or 5-15dB):"
 end
 
 -- called by main.lua when the field is committed

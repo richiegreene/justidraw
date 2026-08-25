@@ -815,10 +815,19 @@ function love.keypressed(key, scancode, isrepeat)
 			-- is asked for rather than bound to keys because it is a musical
 			-- quantity and can be anything -- 4, 5, 7, or 5:4
 			Divide.startEditing()
-		elseif key == "l" and (modifierKeys.ctrl or modifierKeys.cmd) then
-			-- decibels over the highlight, flat or ramped. l for loudness: b was
-			-- asked for and is the synth cycle, and a would be read as select-all
-			-- by anyone who had ever used another program
+		elseif key == "i" and (modifierKeys.ctrl or modifierKeys.cmd) then
+			--[[
+			decibels over the highlight, flat or ramped. i for intensity.
+
+			the letter went through three before this one, and the reason is
+			worth leaving here. b is the synth cycle. l was tried and is dead on
+			arrival: bare l selects the lasso further up this same chain, and an
+			elseif that is already true never reaches the branch below it, so
+			cmd+l picked up the lasso and the new command was unreachable code
+			that looked fine. a, q, w, x and z all mean something else in every
+			other program on the machine. i has no branch at all, modified or
+			bare, so nothing above can shadow it.
+			]]
 			Loudness.startEditing()
 		elseif key == "d" and modifierKeys.shift then
 			Clipboard.duplicate()
