@@ -122,28 +122,6 @@ local function digitTo(limits, digit)
 	return lerp(limits[1], limits[2], math.max(0, math.min(9, digit)) / 9)
 end
 
--- "+6dB", "6dB", "-3dB", "5-15dB", "25-2dB". returns the two ends of the ramp,
--- which are the same figure where it is not a ramp
-local function readGain(text)
-	local s = text:gsub("^%+", "")
-	local a, b = s:match("^([%+%-]?%d+%.?%d*)%-([%+%-]?%d+%.?%d*)[dD][bB]$")
-	if a then
-		a, b = tonumber(a), tonumber(b)
-		if a and b then
-			return a, b
-		end
-		return nil
-	end
-	local only = s:match("^([%+%-]?%d+%.?%d*)[dD][bB]$")
-	if only then
-		local n = tonumber(only)
-		if n then
-			return n, n
-		end
-	end
-	return nil
-end
-
 --[[
 what was in the brackets.
 
@@ -168,7 +146,7 @@ function Divide.readShape(text)
 				said[#said + 1] = digits
 				any = true
 			else
-				local a, b = readGain(part)
+				local a, b = Gain.read(part)
 				if not a then
 					return nil, "in brackets: a gain like +6dB or 5-15dB, and four digits like 0158"
 				end
@@ -658,36 +636,6 @@ local function shapeNote(head, shape, gainAt)
 end
 
 --[[
-decibels, as a multiplier on *width*.
-
-the synth squares the width to get an amplitude -- amp_curve in audio.lua is
-x*x -- so width is not amplitude and the usual 10^(dB/20) is the wrong power
-here. it would deliver twice the decibels asked for, quietly, and the mistake
-would be invisible: everything would simply be louder than it said.
-
-so the square comes out in the exponent. a width of w sounds at w^2, a gain of
-g decibels wants w^2 * 10^(g/10), and the width that gives is w * 10^(g/40).
-]]
-function Divide.widthRatio(db)
-	return 10 ^ (db / 40)
-end
-
---[[
-how much louder the drawing can go before it runs out of width.
-
-width is held to 1 everywhere in this program, so the headroom over a stretch is
-set by how wide it already is -- and a composer asking for +25dB over material
-drawn at half width is asking for something the format cannot hold. worth saying
-in decibels, which is what they were thinking in.
-]]
-local function headroomDb(peakW)
-	if peakW <= 1e-6 then
-		return 99
-	end
-	return 40 * math.log(1 / peakW, 10)
-end
-
---[[
 the gain at an x, as a multiplier on width.
 
 decibels are a ratio and the drawing is already at some level, so this multiplies
@@ -704,7 +652,7 @@ local function gainFunction(shape, startX, endX)
 	local span = endX - startX
 	return function(x)
 		local f = span > 1e-9 and math.max(0, math.min(1, (x - startX) / span)) or 0
-		return Divide.widthRatio(lerp(shape.db0, shape.db1, f))
+		return Gain.widthRatio(lerp(shape.db0, shape.db1, f))
 	end
 end
 
@@ -826,7 +774,7 @@ function Divide.run(cuts, said, shape)
 	if shape then
 		msg = msg .. " (" .. shape.said .. ")"
 		if clipped then
-			msg = msg .. string.format(" -- clipped; about %+.0fdB fits here", headroomDb(peakBefore))
+			msg = msg .. string.format(" -- clipped; about %+.0fdB fits here", Gain.headroom(peakBefore))
 		end
 	end
 	setMessage(msg)

@@ -28,10 +28,14 @@ local Stretch = require("tool_stretch")
 local Smudge = require("tool_smudge")
 local Comment = require("tool_comment")
 local Snap = require("tool_snap")
--- not a tool: a command over the selection, like join and thin, and it keeps its
--- own file because what it has to know about is the tempo map rather than the
--- pointer. see tool_divide.lua
+-- the decibel arithmetic the next two share. required before them, since both
+-- read it at load
+Gain = require("gain")
+-- not tools: commands over the selection, like join and thin, and they keep
+-- their own files because what they have to know about is the tempo map and the
+-- amplitude rather than the pointer
 Divide = require("tool_divide")
+Loudness = require("tool_loudness")
 
 --print console directly
 io.stdout:setvbuf("no")
@@ -541,6 +545,11 @@ function love.keypressed(key, scancode, isrepeat)
 				partMetadata[part] = { category = category, name = name }
 				File.savePartMetadata(song.name .. ".sav")
 				setMessage("part " .. part .. ": " .. name)
+			elseif textEditTarget == Loudness then
+				local ok, err = pcall(Loudness.commit, textEntered)
+				if not ok then
+					setMessage("loudness failed: " .. tostring(err))
+				end
 			elseif textEditTarget == Divide then
 				-- the field is a count, not a name: it is read and acted on
 				-- rather than stored, and a misreading is reported by Divide.
@@ -806,6 +815,11 @@ function love.keypressed(key, scancode, isrepeat)
 			-- is asked for rather than bound to keys because it is a musical
 			-- quantity and can be anything -- 4, 5, 7, or 5:4
 			Divide.startEditing()
+		elseif key == "l" and (modifierKeys.ctrl or modifierKeys.cmd) then
+			-- decibels over the highlight, flat or ramped. l for loudness: b was
+			-- asked for and is the synth cycle, and a would be read as select-all
+			-- by anyone who had ever used another program
+			Loudness.startEditing()
 		elseif key == "d" and modifierKeys.shift then
 			Clipboard.duplicate()
 		elseif key == "d" then
