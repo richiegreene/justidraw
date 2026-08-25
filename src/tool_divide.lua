@@ -27,6 +27,13 @@ is a quintuplet and not five equal slices of wall clock.
 
 with no tempo map there is nothing to be notated against and the stretch is cut
 evenly in x, which is the honest fallback and is said out loud when it happens.
+
+what the notes then *sound* like is the second half of the command, in brackets
+after the rhythm: a gain in decibels and an envelope for each note. both add to
+the drawing rather than replacing it, which is the same principle as the cutting
+-- the composer drew this material and asked for it to be articulated, not
+overwritten -- so a swell across a bar is still that swell after being cut into
+thirty-seconds, shaped and lifted six decibels.
 ]]
 
 Divide = {}
@@ -70,6 +77,115 @@ has to be able to follow an address like everything else can. `b.2, 5:4` is a
 quintuplet on the second beat, and nothing in the line has to be read twice to
 see which half is which.
 ]]
+
+--[[
+the shape a division may be given: how loud, and what each note's amplitude does
+across its own length.
+
+	32 (+6dB)          every new note six decibels over what was drawn
+	32 (0158)          shaped, at the loudness already there
+	32 (+6dB; 0158)    both
+	32 (5-15dB; 0158)  a crescendo, +5dB at the start of the stretch to +15 at
+	                   the end of it -- across all the notes, not inside each
+
+the decibels are *added to* what the drawing already does. this program has no
+absolute level: a line's width is its loudness, the composer drew it that way on
+purpose, and a command that set a level rather than adding one would flatten the
+phrasing it was asked to articulate. so the figure is a gain, the drawn shape
+survives it, and a ramp is a crescendo over the whole stretch rather than a new
+dynamic imposed on each note.
+
+the four digits are attack, decay, sustain, release, 0 to 9, and 0 is always the
+small or quick end of whatever that parameter measures -- three of them are times
+and the third is a level, and saying "0 is fast or small" covers both without
+having to remember which is which. they scale to the note they are shaping, so
+one setting sounds like itself on a semibreve and on a thirty-second: an attack
+of 3 is a proportion of the note, not a number of milliseconds that would swallow
+the short one whole.
+
+the envelope multiplies rather than replaces, for the same reason the decibels
+add. a note cut out of a swell keeps the swell.
+]]
+
+local ADSR_LIMITS = {
+	attack = { 0.004, 0.40 },
+	decay = { 0.010, 0.40 },
+	sustain = { 0.05, 1.00 },
+	release = { 0.010, 0.50 },
+}
+
+local function lerp(a, b, f)
+	return a + (b - a) * f
+end
+
+local function digitTo(limits, digit)
+	return lerp(limits[1], limits[2], math.max(0, math.min(9, digit)) / 9)
+end
+
+-- "+6dB", "6dB", "-3dB", "5-15dB", "25-2dB". returns the two ends of the ramp,
+-- which are the same figure where it is not a ramp
+local function readGain(text)
+	local s = text:gsub("^%+", "")
+	local a, b = s:match("^([%+%-]?%d+%.?%d*)%-([%+%-]?%d+%.?%d*)[dD][bB]$")
+	if a then
+		a, b = tonumber(a), tonumber(b)
+		if a and b then
+			return a, b
+		end
+		return nil
+	end
+	local only = s:match("^([%+%-]?%d+%.?%d*)[dD][bB]$")
+	if only then
+		local n = tonumber(only)
+		if n then
+			return n, n
+		end
+	end
+	return nil
+end
+
+--[[
+what was in the brackets.
+
+returns a shape table, or nil with a reason. an empty bracket is a shape that
+does nothing and is treated as a mistake rather than obeyed, since nobody types
+one on purpose.
+]]
+function Divide.readShape(text)
+	text = (text or ""):gsub("%s+", "")
+	local shape = { db0 = 0, db1 = 0 }
+	local said = {}
+	local any = false
+
+	for part in (text .. ";"):gmatch("(.-);") do
+		if part ~= "" then
+			local digits = part:match("^(%d%d%d%d)$")
+			if digits then
+				shape.attack = tonumber(digits:sub(1, 1))
+				shape.decay = tonumber(digits:sub(2, 2))
+				shape.sustain = tonumber(digits:sub(3, 3))
+				shape.release = tonumber(digits:sub(4, 4))
+				said[#said + 1] = digits
+				any = true
+			else
+				local a, b = readGain(part)
+				if not a then
+					return nil, "in brackets: a gain like +6dB or 5-15dB, and four digits like 0158"
+				end
+				shape.db0, shape.db1 = a, b
+				said[#said + 1] = (a == b) and string.format("%+gdB", a)
+					or string.format("%+g to %+gdB", a, b)
+				any = true
+			end
+		end
+	end
+
+	if not any then
+		return nil, "nothing in those brackets"
+	end
+	shape.said = table.concat(said, ", ")
+	return shape
+end
 
 local VALUES = { [1] = true, [2] = true, [4] = true, [8] = true, [16] = true, [32] = true, [64] = true }
 
@@ -419,11 +535,185 @@ local function cutChain(head, x, gap, doomed)
 end
 
 --[[
+put a vertex on a line at x, between the two it falls between.
+
+used to give an envelope somewhere to turn. a note four vertices long has
+nowhere to put an attack and a decay, and scaling the four it has would give a
+shape that depends on how densely the composer happened to draw rather than on
+what they asked for.
+]]
+local function insertBetween(head, x)
+	local a = vertexBefore(head, x)
+	if not a or not a.r then
+		return nil
+	end
+	if math.abs(a.x - x) < 1e-9 then
+		return a
+	end
+	local b = a.r
+	if math.abs(b.x - x) < 1e-9 then
+		return b
+	end
+	if x <= a.x or x >= b.x then
+		return nil
+	end
+	local y, w = sampleAt(a, b, x)
+	local v = { x = x, y = y, w = w, part = a.part, l = a, r = b }
+	a.r = v
+	b.l = v
+	song.track[1][#song.track[1] + 1] = v
+	return v
+end
+
+--[[
+shape one note.
+
+the envelope is worked out as a proportion of this note's own length, so the
+same four digits mean the same thing on a long note and a short one -- which is
+the only way a setting typed once can apply to a stretch of thirty-seconds and a
+stretch of minims alike.
+
+the three times are held to the note between them. a release of 9 on a note that
+also has a slow attack would otherwise run backwards through it, and an envelope
+whose parts overlap is not a shape, it is an argument.
+]]
+local function shapeNote(head, shape, gainAt)
+	local verts = {}
+	local v = head
+	while v do
+		verts[#verts + 1] = v
+		v = v.r
+	end
+	if #verts < 2 then
+		return false
+	end
+
+	local s = verts[1].x
+	local e = verts[#verts].x
+	local L = e - s
+	if L <= 1e-9 then
+		return false
+	end
+
+	local env
+	if shape.attack then
+		local at = digitTo(ADSR_LIMITS.attack, shape.attack) * L
+		local dt = digitTo(ADSR_LIMITS.decay, shape.decay) * L
+		local rt = digitTo(ADSR_LIMITS.release, shape.release) * L
+		local sustain = digitTo(ADSR_LIMITS.sustain, shape.sustain)
+
+		local total = at + dt + rt
+		if total > L * 0.95 then
+			local k = (L * 0.95) / total
+			at, dt, rt = at * k, dt * k, rt * k
+		end
+
+		-- somewhere for each corner to be, so the shape is drawn and not merely
+		-- sampled wherever the line's own vertices happen to sit
+		for _, bx in ipairs({ s + at, s + at + dt, e - rt }) do
+			if bx > s + 1e-9 and bx < e - 1e-9 then
+				insertBetween(head, bx)
+			end
+		end
+
+		env = function(x)
+			local t = x - s
+			if t <= at then
+				return at > 1e-9 and (t / at) or 1
+			elseif t <= at + dt then
+				return dt > 1e-9 and lerp(1, sustain, (t - at) / dt) or sustain
+			elseif t <= L - rt then
+				return sustain
+			else
+				return rt > 1e-9 and sustain * ((L - t) / rt) or 0
+			end
+		end
+	end
+
+	-- re-walked, because the breakpoints above joined the chain
+	verts = {}
+	v = head
+	while v do
+		verts[#verts + 1] = v
+		v = v.r
+	end
+
+	local clipped = false
+	for i, p in ipairs(verts) do
+		local w = p.w
+		if env then
+			w = w * env(p.x)
+		end
+		w = w * gainAt(p.x)
+		if w > 1 then
+			w = 1
+			clipped = true
+		end
+		p.w = math.max(0, w)
+	end
+	-- a note still has to end. the release brings it to nothing on its own, but
+	-- a shape with no envelope must not have its closing zero scaled into a step
+	verts[#verts].w = 0
+	return clipped
+end
+
+--[[
+decibels, as a multiplier on *width*.
+
+the synth squares the width to get an amplitude -- amp_curve in audio.lua is
+x*x -- so width is not amplitude and the usual 10^(dB/20) is the wrong power
+here. it would deliver twice the decibels asked for, quietly, and the mistake
+would be invisible: everything would simply be louder than it said.
+
+so the square comes out in the exponent. a width of w sounds at w^2, a gain of
+g decibels wants w^2 * 10^(g/10), and the width that gives is w * 10^(g/40).
+]]
+function Divide.widthRatio(db)
+	return 10 ^ (db / 40)
+end
+
+--[[
+how much louder the drawing can go before it runs out of width.
+
+width is held to 1 everywhere in this program, so the headroom over a stretch is
+set by how wide it already is -- and a composer asking for +25dB over material
+drawn at half width is asking for something the format cannot hold. worth saying
+in decibels, which is what they were thinking in.
+]]
+local function headroomDb(peakW)
+	if peakW <= 1e-6 then
+		return 99
+	end
+	return 40 * math.log(1 / peakW, 10)
+end
+
+--[[
+the gain at an x, as a multiplier on width.
+
+decibels are a ratio and the drawing is already at some level, so this multiplies
+what is there. the ramp is read across the whole divided stretch rather than
+within each note, which is what makes it a crescendo over the bar instead of a
+swell repeated on every thirty-second.
+]]
+local function gainFunction(shape, startX, endX)
+	if not shape then
+		return function()
+			return 1
+		end
+	end
+	local span = endX - startX
+	return function(x)
+		local f = span > 1e-9 and math.max(0, math.min(1, (x - startX) / span)) or 0
+		return Divide.widthRatio(lerp(shape.db0, shape.db1, f))
+	end
+end
+
+--[[
 divide a stretch into notes.
 
 `cuts` are x positions; the first and last of them are the ends of the stretch.
 ]]
-function Divide.run(cuts, said)
+function Divide.run(cuts, said, shape)
 	if #cuts < 2 then
 		setMessage("nothing to divide there")
 		return
@@ -494,9 +784,52 @@ function Divide.run(cuts, said)
 	end
 
 	Edit.removeSingles()
+
+	--[[
+	shaping, once the notes exist.
+
+	done by finding the heads inside the stretch rather than by remembering what
+	cutChain handed back, because a division that fell on a line's own beginning
+	makes no new head and yet that note is as much part of the stretch as the
+	ones that were cut. a head exactly at the far end is the material *after* the
+	stretch and is left alone.
+	]]
+	local clipped = false
+	-- taken before anything is scaled: afterwards every clipped vertex reads 1
+	-- and the headroom would come out as nothing whatever was asked for
+	local peakBefore = 0
+	if shape then
+		for _, v in ipairs(song.track[1]) do
+			if v.x >= startX - 1e-6 and v.x < endX - 1e-6 then
+				peakBefore = math.max(peakBefore, v.w or 0)
+			end
+		end
+		local gainAt = gainFunction(shape, startX, endX)
+		local shaped = 0
+		for _, v in ipairs(song.track[1]) do
+			if not v.l and v.x >= startX - 1e-6 and v.x < endX - 1e-6 then
+				if shapeNote(v, shape, gainAt) then
+					clipped = true
+				end
+				shaped = shaped + 1
+			end
+		end
+		if shaped == 0 then
+			shape = nil
+		end
+	end
+
 	Selection.refresh()
 	Undo.register()
-	setMessage("divided " .. said .. " -- " .. made .. " attacks")
+
+	local msg = "divided " .. said .. " -- " .. made .. " attacks"
+	if shape then
+		msg = msg .. " (" .. shape.said .. ")"
+		if clipped then
+			msg = msg .. string.format(" -- clipped; about %+.0fdB fits here", headroomDb(peakBefore))
+		end
+	end
+	setMessage(msg)
 end
 
 -- ctrl/cmd+d: ask what to divide into, then do it
@@ -508,7 +841,7 @@ function Divide.startEditing()
 	textEntered = Divide.text
 	textInput = true
 	textEditTarget = Divide
-	textInputLabel = "divide (16, or b.2, 32):"
+	textInputLabel = "divide (16 | b.2, 32 | 32 (+6dB; 0158)):"
 end
 
 -- called by main.lua when the field is committed
@@ -523,7 +856,25 @@ function Divide.commit(text)
 		return
 	end
 
-	local spec, valueText, err = Divide.split(text)
+	-- the bracket comes off first, so neither the address nor the value has to
+	-- know it might be followed by one
+	local body = (text or ""):gsub("%s+", "")
+	local shape = nil
+	local inner = body:match("%((.*)%)$")
+	if inner then
+		body = body:gsub("%b()$", "")
+		local got, why = Divide.readShape(inner)
+		if not got then
+			setMessage(why)
+			return
+		end
+		shape = got
+	elseif body:find("%(") then
+		setMessage("that bracket is not closed")
+		return
+	end
+
+	local spec, valueText, err = Divide.split(body)
 	if err then
 		setMessage(err)
 		return
@@ -538,7 +889,7 @@ function Divide.commit(text)
 			return
 		end
 		Divide.text = text
-		Divide.run(Divide.evenCuts(x0, x1, count), "the selection, evenly -- no tempo map")
+		Divide.run(Divide.evenCuts(x0, x1, count), "the selection, evenly -- no tempo map", shape)
 		return
 	end
 
@@ -563,7 +914,7 @@ function Divide.commit(text)
 	end
 
 	Divide.text = text
-	Divide.run(Divide.cuts(q0, q1, count), said .. " into " .. count)
+	Divide.run(Divide.cuts(q0, q1, count), said .. " into " .. count, shape)
 end
 
 return Divide

@@ -23,6 +23,7 @@ shortcuts
  shift+D: duplicate selection
  J: Join notes
  ctrl/cmd+D: divide -- 16 (sixteenths), b.2, 32 (beat 2 only), b.2, 5:4
+   add loudness/shape in brackets: 32 (+6dB; 0158) or 32 (5-15dB; 0158)
  V: thin selection (fewer vertices, same sound)
  shift+V: densify selection (silent, undoes thinning)
  ctrl+V: max segment length (thin further)
