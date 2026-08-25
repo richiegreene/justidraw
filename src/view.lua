@@ -110,7 +110,10 @@ local function drawTempoMap(ix, iy, ex, ey, sx, sy)
 	local lastFineSX = -math.huge
 	local lastBeatSX = -math.huge
 	for _, a in ipairs(TempoMap.anchors) do
-		if a.x >= ix - 100 and a.x <= ex + 100 and a.role ~= "downbeat" then
+		local guideEnabled = a.role == "beat" and TempoMap.showBeats
+			or a.role == "subdivision" and TempoMap.showSubdivisions
+			or a.role ~= "beat" and a.role ~= "subdivision"
+		if guideEnabled and a.x >= ix - 100 and a.x <= ex + 100 and a.role ~= "downbeat" then
 			local ax = sx * a.x
 			local c = a.tagged and hi or grid
 			local alpha = 0.25

@@ -47,6 +47,8 @@ TempoMap.bpm = nil
 TempoMap.song = nil
 TempoMap.duration = 0
 TempoMap.source = nil
+TempoMap.showBeats = true
+TempoMap.showSubdivisions = true
 
 function TempoMap.clear()
 	TempoMap.active = false
@@ -56,6 +58,8 @@ function TempoMap.clear()
 	TempoMap.song = nil
 	TempoMap.duration = 0
 	TempoMap.source = nil
+	TempoMap.showBeats = true
+	TempoMap.showSubdivisions = true
 end
 
 -- the words of one line
@@ -93,6 +97,9 @@ function TempoMap.parse(text)
 			TempoMap.bpm = num(w[2])
 		elseif head == "duration" then
 			TempoMap.duration = num(w[2]) or 0
+		elseif head == "guides" then
+			TempoMap.showBeats = w[2] ~= "no-beats"
+			TempoMap.showSubdivisions = w[3] ~= "no-subdivisions"
 		elseif head == "bar" and #w >= 4 then
 			local number, x, t = num(w[2]), num(w[3]), num(w[4])
 			if number and x and t then
