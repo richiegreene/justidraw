@@ -80,6 +80,7 @@ minLength = 50
 automergeDist = 50
 selectNotes = false
 blackAndWhite = false
+partMetadata = {}
 
 local messageList = {}
 local MESSAGE_TIME = 3.0
@@ -354,6 +355,49 @@ function love.update(dt)
 	end
 end
 
+local function drawPartMetadata()
+	local entries = {}
+	for part, meta in pairs(partMetadata or {}) do
+		if meta and (meta.category or meta.name) then
+			table.insert(entries, { part = part, category = meta.category or "", name = meta.name or "" })
+		end
+	end
+	if #entries == 0 then return end
+
+	table.sort(entries, function(a, b) return a.part < b.part end)
+	local columns = #entries > 16 and 2 or 1
+	local rows = math.ceil(#entries / columns) + 1
+	local rowHeight = smallFont:getHeight() + 3
+	local columnWidth = 190
+	local panelWidth = columns * columnWidth + 20
+	local panelHeight = rows * rowHeight + 14
+	local x = width - panelWidth - 10
+	local y = Theme.current.showMeter and 48 or 10
+	local bg = Theme.current.background
+
+	love.graphics.setColor(bg[1], bg[2], bg[3], 0.82)
+	love.graphics.rectangle("fill", x, y, panelWidth, panelHeight)
+	love.graphics.setColor(Theme.current.text)
+	love.graphics.setFont(smallFont)
+	love.graphics.print("part groups", x + 10, y + 7)
+
+	for i, entry in ipairs(entries) do
+		local column = math.floor((i - 1) / math.ceil(#entries / columns))
+		local row = (i - 1) % math.ceil(#entries / columns) + 1
+		local px = x + 10 + column * columnWidth
+		local py = y + 7 + row * rowHeight
+		local label = entry.name ~= "" and entry.name or ("part " .. entry.part)
+		if entry.category ~= "" then label = entry.category .. " / " .. label end
+		local colour = Theme.current.parts[entry.part] and Theme.current.parts[entry.part].color
+		if colour and not blackAndWhite then
+			love.graphics.setColor(colour)
+			love.graphics.rectangle("fill", px, py + 4, 8, 8)
+		end
+		love.graphics.setColor(Theme.current.text)
+		love.graphics.print(entry.part .. "  " .. label, px + 13, py)
+	end
+	end
+
 function love.draw()
 	love.graphics.setBackgroundColor(Theme.current.background)
 	View.draw()
@@ -421,6 +465,8 @@ function love.draw()
 		love.graphics.rectangle("line", width - 100, 25, 80, 10)
 	end
 
+	drawPartMetadata()
+
 	if textInput then
 		local c = Theme.current.background
 		love.graphics.setColor(c[1], c[2], c[3], 0.65)
@@ -457,7 +503,16 @@ function love.keypressed(key, scancode, isrepeat)
 				textEntered = string.sub(textEntered, 1, byteoffset - 1)
 			end
 		elseif key == "return" then
-			if textEditTarget then
+			if textEditTarget and textEditTarget.partMetadata then
+				local part = textEditTarget.partMetadata
+				local category, name = textEntered:match("^%s*(.-)%s*/%s*(.-)%s*$")
+				if not name then
+					category, name = "", textEntered:match("^%s*(.-)%s*$")
+				end
+				partMetadata[part] = { category = category, name = name }
+				File.savePartMetadata(song.name .. ".sav")
+				setMessage("part " .. part .. ": " .. name)
+			elseif textEditTarget then
 				textEditTarget.text = textEntered
 				if textEditTarget == Snap then
 					Snap.snappingLogic()
@@ -515,6 +570,19 @@ function love.keypressed(key, scancode, isrepeat)
 			end
 		elseif key == "b" and (modifierKeys.ctrl or modifierKeys.cmd) then
 			Audio.nextSynth()
+		elseif key == "p" and modifierKeys.shift and (modifierKeys.ctrl or modifierKeys.cmd) then
+			local target = Selection.list[1] or Edit.noteAtCursor()
+			local part = target and target.part
+			if not part then
+				setMessage("select or point at an assigned part first")
+			else
+				local meta = partMetadata[part] or {}
+				textEntered = (meta.category or "") ~= "" and (meta.category .. " / ") or ""
+				textEntered = textEntered .. (meta.name or "")
+				textEditTarget = { partMetadata = part }
+				textInputLabel = "part category / name:"
+				textInput = true
+			end
 		elseif key == "v" and (modifierKeys.ctrl or modifierKeys.cmd) then
 			-- how far apart vertices are allowed to get, which is how far V can thin
 			Edit.cycleResampleDist()

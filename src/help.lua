@@ -41,6 +41,8 @@ shortcuts
  ctrl+G: engrave's barlines / the plain grid
  ctrl+B: cycle between synths
  shift+ctrl/cmd+B: show/hide part colors
+ shift+ctrl/cmd+P: name the assigned part under the cursor (Category / Name)
+ Engrave part groups appear in the upper-right legend
  shift+R: reverb off/on
  Escape: quit
 ]]

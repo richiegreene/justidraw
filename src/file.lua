@@ -4,12 +4,51 @@ local adjectives = require("res/adjectives")
 
 File = {}
 
+local PART_META_SUFFIX = ".parts"
+
+local function partMetaName(name)
+	return name:gsub("%.sav$", PART_META_SUFFIX)
+end
+
+local function encodePartMeta(value)
+	return tostring(value or ""):gsub("\\", "\\\\"):gsub("\t", "\\t"):gsub("\n", "\\n")
+end
+
+local function decodePartMeta(value)
+	return value:gsub("\\n", "\n"):gsub("\\t", "\t"):gsub("\\\\", "\\")
+end
+
+function File.loadPartMetadata(name)
+	partMetadata = {}
+	local data = love.filesystem.read(partMetaName(name))
+	if not data then return end
+	for line in data:gmatch("[^\r\n]+") do
+		local number, category, label = line:match("^(%d+)\t([^\t]*)\t(.*)$")
+		number = tonumber(number)
+		if number and number >= 1 and number <= 32 then
+			partMetadata[number] = { category = decodePartMeta(category), name = decodePartMeta(label) }
+		end
+	end
+end
+
+function File.savePartMetadata(name)
+	local lines = {}
+	for number = 1, 32 do
+		local meta = partMetadata and partMetadata[number]
+		if meta and (meta.name or meta.category) then
+			lines[#lines + 1] = table.concat({ number, encodePartMeta(meta.category), encodePartMeta(meta.name) }, "\t")
+		end
+	end
+	love.filesystem.write(partMetaName(name), table.concat(lines, "\n"))
+end
+
 function File.save()
 	song.version_major = VERSION_MAJOR
 	song.version_minor = VERSION_MINOR
 	local filename = song.name .. ".sav"
 
 	love.filesystem.write(filename, binser.serialize(song))
+	File.savePartMetadata(filename)
 	love.filesystem.write("last_save", filename)
 	setMessage("saved: " .. filename)
 end
@@ -20,6 +59,7 @@ function File.loadLast()
 		if love.filesystem.getInfo(name) then
 			File.read(love.filesystem.read(name))
 			File.loadTempoMap(name)
+			File.loadPartMetadata(name)
 			setMessage("loaded last save: " .. name)
 			return
 		end
@@ -70,6 +110,8 @@ end
 
 function File.new()
 	song = File.newSong()
+	partMetadata = {}
+	Edit.clearMutes()
 	File.setTitle()
 end
 
@@ -84,6 +126,7 @@ function File.load(f)
 
 	song.name = name
 	File.loadTempoMap(name)
+	File.loadPartMetadata(filename)
 	File.setTitle()
 end
 
@@ -98,6 +141,7 @@ end
 
 function File.read(f)
 	local file = binser.deserialize(f)[1]
+	Edit.clearMutes()
 
 	-- backwards compatibility housekeeping
 	if not file.version_major then

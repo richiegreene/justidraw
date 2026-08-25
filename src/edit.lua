@@ -173,6 +173,12 @@ session setting, it is not written to the save file.
 Edit.mutedParts = {}
 local anyMuted = false
 
+function Edit.clearMutes()
+	Edit.mutedParts = {}
+	anyMuted = false
+	Selection.deselect()
+end
+
 -- a muted part is locked: it still shows, greyed out, but it cannot be
 -- selected or edited, so it stays put as a backdrop to work against
 function Edit.isLocked(vert)
