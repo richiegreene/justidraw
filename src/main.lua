@@ -1024,11 +1024,23 @@ end
 function love.filedropped(f)
 	local filename = f:getFilename()
 	local f_sub = filename:match("[^/\\]*.sav$")
-	if f_sub then
+	local map_sub = filename:match("[^/\\]*.tempomap$")
+	if map_sub then
+		local text = f:read()
+		local target = TempoMap.nameFor(song.name .. ".sav")
+		love.filesystem.write(target, text)
+		if TempoMap.parse(text) then
+			TempoMap.show = true
+			setMessage("tempo map applied to " .. song.name .. ".sav")
+		else
+			TempoMap.clear()
+			setMessage("not a valid tempo map")
+		end
+	elseif f_sub then
 		File.load(f)
 		setMessage("loaded save file: " .. f_sub)
 	else
-		setMessage("not a save file!")
-		setMessage("file must end in '.sav'")
+		setMessage("not a save or tempo map file!")
+		setMessage("file must end in '.sav' or '.tempomap'")
 	end
 end
