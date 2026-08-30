@@ -22,6 +22,7 @@ shortcuts
  shift+N: toggle selecting notes or vertices
  shift+D: duplicate selection
  J: Join notes
+ ctrl/cmd+A: select all visible notes (muted/locked parts omitted)
  ctrl/cmd+D: divide -- 16 (sixteenths), b.2, 32 (beat 2 only), b.2, 5:4
    add loudness/shape in brackets: 32 (+6dB; 0158) or 32 (5-15dB; 0158)
  ctrl/cmd+I: intensity over the highlight -- +6dB, -3, or 5-15dB to ramp
@@ -29,6 +30,8 @@ shortcuts
  shift+V: densify selection (silent, undoes thinning)
  ctrl+V: max segment length (thin further)
  ctrl+alt(⌥)+1-32: assign part color (0: clear; type two digits quickly)
+ ctrl/cmd+alt(⌥)+R: assign selected notes by average register, lowest to highest -> 1..32
+ shift+alt(⌥)+P: tell which part(s) the selection is registered as
  shift+ctrl+alt(⌥)+1-32: select part (0: unassigned; type two digits quickly)
  alt(⌥)+1-32: mute + lock part (0: unassigned; type two digits quickly)
  Y: Show harmonic series

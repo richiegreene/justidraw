@@ -165,6 +165,114 @@ function Edit.assignPart(part)
 	Undo.register()
 end
 
+-- report the part-number / metadata the selection is currently registered as.
+function Edit.describeSelectedParts()
+	local notes = Edit.selectedNotes()
+	if #notes == 0 then
+		local v = Edit.noteAtCursor()
+		if v then
+			notes = { v }
+		end
+	end
+	if #notes == 0 then
+		setMessage("select notes to inspect")
+		return
+	end
+
+	local seen = {}
+	local parts = {}
+	for _, v in ipairs(notes) do
+		local part = v.part or 0
+		if not seen[part] then
+			seen[part] = true
+			table.insert(parts, part)
+		end
+	end
+	table.sort(parts)
+
+	if #parts == 0 then
+		setMessage("selection: unassigned")
+		return
+	end
+
+	local labels = {}
+	for _, part in ipairs(parts) do
+		local label = part ~= 0 and ("part " .. part) or "unassigned"
+		local meta = partMetadata[part]
+		if part ~= 0 and meta then
+			local category = meta.category or ""
+			local name = meta.name or ""
+			if category ~= "" or name ~= "" then
+				label = label .. " (" .. ((category ~= "" and category .. " / ") or "") .. name .. ")"
+			end
+		end
+		table.insert(labels, label)
+	end
+
+	setMessage("selection: " .. table.concat(labels, ", "))
+end
+
+-- assign the selected notes to part numbers 1..Theme.PART_COUNT based on their
+-- mean vertical register, from low (bottom) to high (top). notes are sorted by
+-- their average y position in the selection, and then mapped across the full part
+-- range so that the lowest note lands at part 1 and the highest at part 32.
+function Edit.assignPartByRegister()
+	local notes = Edit.selectedNotes()
+	if #notes == 0 then
+		local v = Edit.noteAtCursor()
+		if v then
+			notes = { v }
+		end
+	end
+	if #notes == 0 then
+		setMessage("select notes to assign by register")
+		return
+	end
+
+	local entries = {}
+	for _, v in ipairs(notes) do
+		local sum = 0
+		local count = 0
+		for _, vert in ipairs(Edit.getNote(v)) do
+			sum = sum + vert.y
+			count = count + 1
+		end
+		if count > 0 then
+			table.insert(entries, { note = v, register = sum / count })
+		end
+	end
+	if #entries == 0 then
+		setMessage("select notes to assign by register")
+		return
+	end
+
+	table.sort(entries, function(a, b)
+		return a.register > b.register
+	end)
+
+	local minRegister = entries[1].register
+	local maxRegister = entries[#entries].register
+	if maxRegister == minRegister then
+		for _, entry in ipairs(entries) do
+			Edit.setNotePart(entry.note, 1)
+		end
+		setMessage("part 1 (all notes in the selection share the same register)")
+		Undo.register()
+		return
+	end
+
+	for i, entry in ipairs(entries) do
+		-- Fewer than 32 notes: use 1..N in order.
+		-- More than 32 notes: keep assigning upward until the cap at 32, then
+		-- fold the remaining upper notes into part 32 as the cutoff category.
+		local part = math.min(i, Theme.PART_COUNT)
+		Edit.setNotePart(entry.note, part)
+	end
+
+	setMessage("assigned by register: bottom to top (1.." .. Theme.PART_COUNT .. " cap)")
+	Undo.register()
+end
+
 --[[
 parts that are silenced during playback, keyed by part number, with 0 standing
 in for the unassigned notes. like the echo/reverb/preview switches this is a
@@ -254,6 +362,26 @@ function Edit.selectPart(part)
 
 	Selection.setNormal(mask)
 	setMessage("selected " .. name .. " (" .. count .. (count == 1 and " note)" or " notes)"))
+	Undo.register()
+end
+
+function Edit.selectAllVisible()
+	local mask = {}
+	local count = 0
+	for _, v in ipairs(Edit.editable()) do
+		mask[v] = true
+		if not v.l then
+			count = count + 1
+		end
+	end
+
+	if count == 0 then
+		setMessage("nothing selectable")
+		return
+	end
+
+	Selection.setNormal(mask)
+	setMessage("selected all visible notes (" .. count .. (count == 1 and " note)" or " notes)"))
 	Undo.register()
 end
 

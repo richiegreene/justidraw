@@ -88,6 +88,8 @@ when selected. Untagged notes keep the normal theme colors.
 the two digits quickly for parts 10 through 32.
 Pressing the same combination again clears it back to the default color.
 With nothing selected, the note under the cursor is used.
+* ctrl+alt+R: assign the selection by average register from bottom to top into
+parts 1 through 32.
 * ctrl+alt+0: clear the part of the selection
 * shift+ctrl+alt+1 .. 32: select every note in that part, anywhere in the project
 * shift+ctrl+alt+0: select every note that has not been assigned to a part

@@ -609,6 +609,8 @@ function love.keypressed(key, scancode, isrepeat)
 			end
 		elseif key == "o" and (modifierKeys.ctrl or modifierKeys.cmd) then
 			love.system.openURL("file://" .. love.filesystem.getSaveDirectory())
+		elseif key == "r" and modifierKeys.alt and (modifierKeys.ctrl or modifierKeys.cmd) then
+			Edit.assignPartByRegister()
 		elseif key == "r" and (modifierKeys.ctrl or modifierKeys.cmd) then
 			Audio.render()
 		elseif key == "t" and (modifierKeys.ctrl or modifierKeys.cmd) then
@@ -684,6 +686,8 @@ function love.keypressed(key, scancode, isrepeat)
 					Audio.seek(View.invTransform(0, 0))
 				end
 			end
+		elseif key == "p" and modifierKeys.alt and modifierKeys.shift then
+			Edit.describeSelectedParts()
 		elseif key == "p" and modifierKeys.shift then
 			if preview then
 				preview = false
@@ -810,6 +814,8 @@ function love.keypressed(key, scancode, isrepeat)
 			Edit.densify()
 		elseif key == "v" and not isrepeat then
 			Edit.thin()
+		elseif key == "a" and (modifierKeys.ctrl or modifierKeys.cmd) then
+			Edit.selectAllVisible()
 		elseif key == "d" and (modifierKeys.ctrl or modifierKeys.cmd) then
 			-- articulate the highlighted stretch as a number of notes. the count
 			-- is asked for rather than bound to keys because it is a musical
