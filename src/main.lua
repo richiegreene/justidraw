@@ -11,6 +11,8 @@ require("clipboard")
 local helpString = require("help")
 local utf8 = require("utf8")
 
+TimeStretch = { text = "2" }
+
 local Draw = require("tool_draw")
 local Erase = require("tool_erase")
 local Pan = require("tool_pan")
@@ -564,6 +566,11 @@ function love.keypressed(key, scancode, isrepeat)
 				if not ok then
 					setMessage("divide failed: " .. tostring(err))
 				end
+			elseif textEditTarget == TimeStretch then
+				local ok, err = pcall(Edit.commitTimeScale, textEntered)
+				if not ok then
+					setMessage("time warp failed: " .. tostring(err))
+				end
 			elseif textEditTarget then
 				textEditTarget.text = textEntered
 				if textEditTarget == Snap then
@@ -840,6 +847,8 @@ function love.keypressed(key, scancode, isrepeat)
 		elseif key == "d" then
 			Selection.deselect()
 			Undo.register()
+		elseif key == "h" and (modifierKeys.ctrl or modifierKeys.cmd) then
+			Edit.startTimeScaleEditing()
 		elseif key == "[" then
 			if selectedTool.radius then
 				selectedTool.radius = selectedTool.radius * 0.9

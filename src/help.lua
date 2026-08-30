@@ -26,6 +26,7 @@ shortcuts
  ctrl/cmd+D: divide -- 16 (sixteenths), b.2, 32 (beat 2 only), b.2, 5:4
    add loudness/shape in brackets: 32 (+6dB; 0158) or 32 (5-15dB; 0158)
  ctrl/cmd+I: intensity over the highlight -- +6dB, -3, or 5-15dB to ramp
+ ctrl/cmd+H: time-warp selected material by exact ratio (2, 0.5, 3:2, 2/1)
  V: thin selection (fewer vertices, same sound)
  shift+V: densify selection (silent, undoes thinning)
  ctrl+V: max segment length (thin further)

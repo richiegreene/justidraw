@@ -600,6 +600,114 @@ function Edit.selectedRuns()
 	return runs
 end
 
+-- Scale the chosen material in time, keeping the leftmost selected x position
+-- fixed so the note or selection expands or contracts like a true time stretch.
+function Edit.scaleTime(factor)
+	local target = Selection.list
+	if #target == 0 then
+		local v = Edit.noteAtCursor()
+		if not v then
+			setMessage("select a note to time-stretch")
+			return
+		end
+		target = Edit.getNote(v)
+	end
+
+	if #target == 0 then
+		setMessage("select material to stretch")
+		return
+	end
+
+	local origin = math.huge
+	for _, v in ipairs(target) do
+		origin = math.min(origin, v.x)
+	end
+
+	if origin == math.huge then
+		setMessage("select material to stretch")
+		return
+	end
+
+	for _, v in ipairs(target) do
+		v.x = origin + (v.x - origin) * factor
+	end
+
+	Edit.resampleAll()
+	Undo.register()
+	setMessage("time scale: " .. factor .. "x")
+end
+
+-- open the exact-ratio text field for a time warp; the entry accepts values
+-- like 2, 0.5, 3:2, or 2/1 and applies them as a time scaling factor.
+function Edit.startTimeScaleEditing()
+	if Selection.isEmpty() then
+		local v = Edit.noteAtCursor()
+		if not v then
+			setMessage("select material to stretch")
+			return
+		end
+	end
+	textEntered = TimeStretch.text
+	textInput = true
+	textEditTarget = TimeStretch
+	textInputLabel = "time warp (2, 0.5, 3:2, 2/1):"
+end
+
+function Edit.commitTimeScale(text)
+	if Selection.isEmpty() then
+		local v = Edit.noteAtCursor()
+		if not v then
+			setMessage("select material to stretch")
+			return
+		end
+	end
+
+	local factor = nil
+	local s = (text or ""):gsub("%s+", "")
+	if s == "" then
+		setMessage("enter a ratio like 2, 0.5, 3:2, or 2/1")
+		return
+	end
+
+	local a, b = s:match("^([%d%.]+)/([%d%.]+)$")
+	if a and b then
+		a = tonumber(a)
+		b = tonumber(b)
+		if a and b and b ~= 0 then
+			factor = a / b
+		end
+	end
+
+	if not factor then
+		local c, d = s:match("^([%d%.]+):([%d%.]+)$")
+		if c and d then
+			c = tonumber(c)
+			d = tonumber(d)
+			if c and d and d ~= 0 then
+				factor = c / d
+			end
+		end
+	end
+
+	if not factor then
+		local n = tonumber(s)
+		if n and n > 0 then
+			factor = n
+		end
+	end
+
+	if not factor then
+		setMessage("ratio must be positive, like 2, 0.5, 3:2, or 2/1")
+		return
+	end
+
+	Edit.scaleTime(factor)
+	TimeStretch.text = s
+	textInput = false
+	textEditTarget = nil
+	textInputLabel = nil
+end
+
 -- drop a set of vertices from the track in one pass. removing them one at a
 -- time would be quadratic, and these commands remove tens of thousands at once
 local function compact(doomed)

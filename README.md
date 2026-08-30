@@ -74,6 +74,8 @@ is one beat). This is how far apart vertices are allowed to get, so it sets how
 far `V` can thin. It is also the spacing notes are resampled to while you edit
 them, so raising it and thinning leaves a song that stays thin; lowering it
 again fills the notes back in the next time you draw on them.
+* ctrl/cmd+H: open a ratio field for time-warping the selection, accepting exact
+values like 2, 0.5, 3:2, or 2/1.
 
 Both commands work on whatever is selected: a lasso, a rectangle, whole notes
 (`shift+N`), or every note in a part (`shift+ctrl+alt+N`). With nothing selected
