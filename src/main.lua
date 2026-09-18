@@ -620,6 +620,8 @@ function love.keypressed(key, scancode, isrepeat)
 			Edit.assignPartByRegister()
 		elseif key == "r" and (modifierKeys.ctrl or modifierKeys.cmd) then
 			Audio.render()
+		elseif key == "t" and modifierKeys.shift and (modifierKeys.ctrl or modifierKeys.cmd) then
+			Edit.startTimeScaleEditing()
 		elseif key == "t" and (modifierKeys.ctrl or modifierKeys.cmd) then
 			Theme.next()
 		elseif key == "b" and modifierKeys.shift and (modifierKeys.ctrl or modifierKeys.cmd) then
@@ -847,8 +849,6 @@ function love.keypressed(key, scancode, isrepeat)
 		elseif key == "d" then
 			Selection.deselect()
 			Undo.register()
-		elseif key == "h" and (modifierKeys.ctrl or modifierKeys.cmd) then
-			Edit.startTimeScaleEditing()
 		elseif key == "[" then
 			if selectedTool.radius then
 				selectedTool.radius = selectedTool.radius * 0.9
